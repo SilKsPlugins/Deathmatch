@@ -1,0 +1,19 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net461</TargetFramework>
+    <PackageLicenseExpression></PackageLicenseExpression>
+	<PackageTags>openmod openmod-plugin unturned</PackageTags>
+	<RootNamespace>Deathmatch.API</RootNamespace>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <GenerateNugetPackage>true</GenerateNugetPackage>
+    <Product>Deathmatch.API</Product>
+    <Authors>SilK</Authors>
+    <Company>SilK's Plugins</Company>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OpenMod.Unturned" Version="2.3.8" />
+  </ItemGroup>
+
+</Project>

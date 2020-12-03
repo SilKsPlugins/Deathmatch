@@ -1,0 +1,44 @@
+# Auto respawns players when they die
+AutoRespawn:
+  Enabled: true
+  Delay: 0 # seconds
+
+# Number of kill a player must reach before they win
+KillThreshold: 30
+
+# Max match duration in seconds
+# Zero for unlimited duration
+MaxDuration: 600
+
+Loadouts:
+- Title: Main
+  Items:
+  - Id: Viper
+  - Id: Viper Magazine
+    Amount: 4
+
+Rewards:
+  # Minimum number of total players needed to gain rewards
+  # This is to stop players boosting and gaining massive
+  # amounts of rewards when player count is low
+  MinimumPlayers: 5
+
+  Winners: # Only winners will receive these rewards
+  - Id: Grilled Cheese Sandwich
+    Amount: 1
+    Chance: 1 # Represents a 100% chance
+  - Id: Canned Beans
+    Amount: 2
+    # No defined chance also represents a 100% chance
+  - Id: Eaglefire
+    Amount: 1
+    Chance: 0.1 # Represents a 10% chance
+  Losers: # Only losers will receive these rewards
+  - Id: Tomato
+    Amount: 5
+  Tied: # If the game comes to a tie, both teams will receive these rewards
+  - Id: Grilled Cheese Sandwich
+    Amount: 2
+  All: # Both teams will receive these rewards in all cases
+  - Id: Police Vest
+    Amount: 1

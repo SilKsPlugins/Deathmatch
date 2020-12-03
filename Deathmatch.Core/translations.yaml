@@ -1,0 +1,22 @@
+commands:
+  disabled_during_match: "This command is disabled during matches."
+  dmstart:
+    success: "Successfully started a {Title} match."
+    failure: "Failed to start match, one may already be running."
+    not_found: "Failed to start match, the specified match does not exist."
+  dmend:
+    success: "Successfully ended match."
+    failure: "Failed to end match. There may be no match running."
+  join:
+    success: "Successfully joined the match/match pool."
+    already: "You've already joined the match/match pool."
+  leave:
+    success: "Successfully left the match/match pool."
+    already: "You're not a part of the match/match pool."
+
+announcements:
+  planned_match: "A game of {Match.Title} will start in {Time}! Make sure to /join!"
+
+logs:
+  registered_match: "Loaded match registration: {Registration.Title} (Enabled: {Registration.Enabled}) - {Registration.Description}"
+  no_registrations: "No match registrations are loaded. Can't auto start a match."

@@ -1,0 +1,22 @@
+# Time between match starts
+# Set to zero for manual match starts
+MatchInterval: 1800 # Default is every 30 minutes
+
+# Announcements before match starts
+# MessageValue is passed to the translation in translations.yaml
+AutoAnnouncements:
+- SecondsBefore: 900
+  MessageTime: "fifteen minutes" # {Time} in translations
+- SecondsBefore: 300
+  MessageTime: "five minutes"
+- SecondsBefore: 60
+  MessageTime: "one minute"
+- SecondsBefore: 30
+  MessageTime: "thirty seconds"
+- SecondsBefore: 10
+  MessageTime: "ten seconds"
+
+# Commands unable to be run during a match
+DisabledCommands:
+- vault
+- i

@@ -1,0 +1,30 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net461</TargetFramework>
+    <PackageLicenseExpression></PackageLicenseExpression>
+	<PackageTags>openmod openmod-plugin unturned</PackageTags>
+	<RootNamespace>TeamDeathmatch</RootNamespace>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <GenerateNugetPackage>true</GenerateNugetPackage>
+    <Product>TeamDeathmatch</Product>
+    <Authors>SilK</Authors>
+    <Company>SilK's Plugins</Company>
+    <LangVersion>8.0</LangVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OpenMod.Unturned" Version="2.3.8" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="config.yaml" />
+    <EmbeddedResource Include="translations.yaml" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Deathmatch.API\Deathmatch.API.csproj" />
+    <ProjectReference Include="..\Deathmatch.Core\Deathmatch.Core.csproj" />
+  </ItemGroup>
+
+</Project>

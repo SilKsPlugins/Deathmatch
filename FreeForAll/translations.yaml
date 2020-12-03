@@ -1,0 +1,22 @@
+commands:
+  spawns:
+    add:
+      success: "Successfully added spawn."
+    remove:
+      success: "Successfully removed the specified spawn."
+      index_out_of_bounds: "Index is out of bounds."
+    list:
+      header: "Spawns: {List}"
+      element: "Index: {I} X: {X} Y: {Y} Z: {Z}"
+      delimiter: ", "
+    clear:
+      success: "Successfully cleared spawns."
+
+announcements:
+  match_start: "A game of Free For All has started! Make sure to /join!"
+  match_end:
+    player_won: "<color=green>{Winner.DisplayName} has won the game of Free For All!</color>"
+    tie: "<color=green>The match has ended in a tie!</color>"
+
+errors:
+  no_spawns: "<color=red>Free For All Match cancelled - spawns aren't setup.</color>"

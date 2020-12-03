@@ -1,0 +1,25 @@
+commands:
+  spawns:
+    common:
+      unknown_team: "Unknown team '{Team}', specify Red or Blue."
+    add:
+      success: "Successfully added {Team} spawn."
+    remove:
+      success: "Successfully removed the specified {Team} spawn."
+      index_out_of_bounds: "Index is out of bounds."
+    list:
+      header: "Spawns: {List}"
+      element: "Index: {I} X: {X} Y: {Y} Z: {Z}"
+      delimiter: ", "
+    clear:
+      success: "Successfully cleared the spawns of team {Team}."
+
+announcements:
+  match_start: "A game of Team Deathmatch has started! Make sure to /join!"
+  match_end:
+    red_won: "<color=red>Red team has won!</color>"
+    blue_won: "<color=blue>Blue team was won!</color>"
+    tie: "<color=green>The match has ended in a tie!</color>"
+
+errors:
+  no_spawns: "<color=red>TDM Match cancelled - spawns aren't setup.</color>"
