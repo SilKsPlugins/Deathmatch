@@ -1,5 +1,6 @@
 ﻿using HarmonyLib;
 using SDG.Unturned;
+using UnityEngine;
 
 namespace Deathmatch.Hub
 {
@@ -7,6 +8,9 @@ namespace Deathmatch.Hub
     {
         public delegate void PositionUpdated(Player player);
         public static event PositionUpdated OnPositionUpdated;
+
+        public delegate void Reviving(Player player, ref Vector3 position, ref byte angle);
+        public static event Reviving OnReviving;
 
         [HarmonyPatch]
         private class Patches
@@ -16,6 +20,13 @@ namespace Deathmatch.Hub
             private static void UpdatePosition(PlayerMovement __instance)
             {
                 OnPositionUpdated?.Invoke(__instance.player);
+            }
+
+            [HarmonyPatch(typeof(PlayerLife), "tellReviving")]
+            [HarmonyPrefix]
+            private static void Reviving(PlayerLife __instance, ref Vector3 position, ref byte angle)
+            {
+                OnReviving?.Invoke(__instance.player, ref position, ref angle);
             }
         }
     }
