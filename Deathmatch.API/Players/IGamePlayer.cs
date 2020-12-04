@@ -41,6 +41,8 @@ namespace Deathmatch.API.Players
 
         PlayerSkills Skills { get; }
 
+        void MaxSkills(bool overpower = false);
+
         PlayerStance Stance { get; }
     }
 }
