@@ -22,7 +22,7 @@ namespace Deathmatch.Hub
                 OnPositionUpdated?.Invoke(__instance.player);
             }
 
-            [HarmonyPatch(typeof(PlayerLife), "tellReviving")]
+            [HarmonyPatch(typeof(PlayerLife), "tellRevive")]
             [HarmonyPrefix]
             private static void Reviving(PlayerLife __instance, ref Vector3 position, ref byte angle)
             {
