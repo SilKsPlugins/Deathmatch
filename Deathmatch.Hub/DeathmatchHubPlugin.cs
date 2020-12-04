@@ -74,7 +74,7 @@ namespace Deathmatch.Hub
 
             if (Hub.DistSqr(player.Transform.position) > Hub.Radius * Hub.Radius &&
                 AsyncHelper.RunSync(() =>
-                    _permissionChecker.CheckPermissionAsync(player.User, OpenModComponentId + ".bypass")) !=
+                    _permissionChecker.CheckPermissionAsync(player.User, "Deathmatch.Hub:bypass")) !=
                 PermissionGrantResult.Grant)
             {
                 Hub.TeleportPlayer(player.Player);
