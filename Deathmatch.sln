@@ -9,7 +9,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Deathmatch.Core", "Deathmat
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TeamDeathmatch", "TeamDeathmatch\TeamDeathmatch.csproj", "{57CCD564-1574-4F48-B441-1F9468CB0269}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FreeForAll", "FreeForAll\FreeForAll.csproj", "{A598A97F-45DD-483D-AFA5-F0AF8D1D9F7D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FreeForAll", "FreeForAll\FreeForAll.csproj", "{A598A97F-45DD-483D-AFA5-F0AF8D1D9F7D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
