@@ -1,6 +1,6 @@
-﻿using System;
+﻿using Cysharp.Threading.Tasks;
+using System;
 using System.Threading.Tasks;
-using Cysharp.Threading.Tasks;
 
 namespace Deathmatch.Core.Helpers
 {

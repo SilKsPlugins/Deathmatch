@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using SDG.Unturned;
+﻿using SDG.Unturned;
 
 namespace Deathmatch.Core.Preservation.Clothing
 {

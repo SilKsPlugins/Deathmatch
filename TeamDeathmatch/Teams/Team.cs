@@ -1,6 +1,4 @@
-﻿using System.Drawing.Drawing2D;
-
-namespace TeamDeathmatch.Teams
+﻿namespace TeamDeathmatch.Teams
 {
     public enum Team
     {

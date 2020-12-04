@@ -267,7 +267,7 @@ namespace Deathmatch.Core.Matches
 
             if (_subscribedMatchEvents.TryGetValue(@event.GetType(), out var method))
             {
-                await (Task) method.Invoke(CurrentMatch, new [] {sender, @event});
+                await (Task)method.Invoke(CurrentMatch, new[] { sender, @event });
             }
         }
     }
