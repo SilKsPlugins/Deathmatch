@@ -1,12 +1,12 @@
 ﻿using Cysharp.Threading.Tasks;
 using Deathmatch.API.Players;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Localization;
+using OpenMod.API.Permissions;
 using OpenMod.API.Plugins;
 using OpenMod.Unturned.Plugins;
 using SDG.Unturned;
 using System;
 using System.Threading.Tasks;
+using OpenMod.Core.Helpers;
 
 [assembly: PluginMetadata("Deathmatch.Hub", DisplayName = "Deathmatch Hub")]
 namespace Deathmatch.Hub
@@ -16,26 +16,26 @@ namespace Deathmatch.Hub
         private const string HubKey = "hub";
 
         private readonly IGamePlayerManager _playerManager;
-        private readonly IConfiguration _configuration;
-        private readonly IStringLocalizer _stringLocalizer;
-        private readonly IServiceProvider _serviceProvider;
+        private readonly IPermissionRegistry _permissionRegistry;
+        private readonly IPermissionChecker _permissionChecker;
 
         public Hub Hub { get; private set; }
 
         public DeathmatchHubPlugin(IGamePlayerManager playerManager,
-            IConfiguration configuration,
-            IStringLocalizer stringLocalizer,
+            IPermissionRegistry permissionRegistry,
+            IPermissionChecker permissionChecker,
             IServiceProvider serviceProvider) : base(serviceProvider)
         {
             _playerManager = playerManager;
-            _configuration = configuration;
-            _stringLocalizer = stringLocalizer;
-            _serviceProvider = serviceProvider;
+            _permissionRegistry = permissionRegistry;
+            _permissionChecker = permissionChecker;
         }
 
         protected override async UniTask OnLoadAsync()
         {
             await LoadHub();
+
+            _permissionRegistry.RegisterPermission(this, "bypass", "Bypass the hub boundary.");
 
             UnturnedPatches.OnPositionUpdated += OnPositionUpdated;
         }
@@ -72,7 +72,10 @@ namespace Deathmatch.Hub
 
             if (player.CurrentMatch != null) return;
 
-            if (Hub.DistSqr(player.Transform.position) > Hub.Radius * Hub.Radius)
+            if (Hub.DistSqr(player.Transform.position) > Hub.Radius * Hub.Radius &&
+                AsyncHelper.RunSync(() =>
+                    _permissionChecker.CheckPermissionAsync(player.User, OpenModComponentId + ".bypass")) !=
+                PermissionGrantResult.Grant)
             {
                 Hub.TeleportPlayer(player.Player);
             }
