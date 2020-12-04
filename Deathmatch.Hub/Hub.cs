@@ -20,7 +20,7 @@ namespace Deathmatch.Hub
 
         public Vector2 GetVector2() => new Vector2(X, Z);
 
-        public Vector2 GetVector3() => new Vector3(X, Y, Z);
+        public Vector3 GetVector3() => new Vector3(X, Y, Z);
 
         public float DistSqr(Vector3 position)
         {
