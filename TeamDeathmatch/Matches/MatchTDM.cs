@@ -104,7 +104,7 @@ namespace TeamDeathmatch.Matches
             await UniTask.SwitchToMainThread();
 
             if (GetPlayer(player.SteamId) != null) return;
-            
+
             Players.Add(player);
 
             if (!IsRunning) return;
@@ -147,7 +147,7 @@ namespace TeamDeathmatch.Matches
         public override async UniTask RemovePlayer(IGamePlayer player)
         {
             await UniTask.SwitchToMainThread();
-            
+
             if (GetPlayer(player) == null) return;
 
             Players.Remove(player);
@@ -281,7 +281,7 @@ namespace TeamDeathmatch.Matches
             {
                 var winnerRewards =
                     Configuration.GetSection("Rewards:Winners").Get<List<ChanceItem>>() ?? new List<ChanceItem>();
-                var loserRewards = 
+                var loserRewards =
                     Configuration.GetSection("Rewards:Losers").Get<List<ChanceItem>>() ?? new List<ChanceItem>();
                 var tiedRewards =
                     Configuration.GetSection("Rewards:Tied").Get<List<ChanceItem>>() ?? new List<ChanceItem>();
@@ -337,7 +337,7 @@ namespace TeamDeathmatch.Matches
         {
             var victim = GetPlayer(@event.Player);
             var killer = GetPlayer(@event.Killer);
-            
+
             if (victim != null && killer != null && victim.GetTeam() == killer.GetTeam() &&
                 !Configuration.GetValue("FriendlyFire", false))
                 @event.IsCancelled = true;

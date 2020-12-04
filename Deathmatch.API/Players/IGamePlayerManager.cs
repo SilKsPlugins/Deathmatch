@@ -1,8 +1,8 @@
-﻿using System;
-using OpenMod.API.Ioc;
+﻿using OpenMod.API.Ioc;
 using OpenMod.API.Users;
-using System.Collections.Generic;
 using OpenMod.Unturned.Users;
+using System;
+using System.Collections.Generic;
 
 namespace Deathmatch.API.Players
 {

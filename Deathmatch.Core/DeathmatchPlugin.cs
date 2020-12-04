@@ -27,7 +27,7 @@ namespace Deathmatch.Core
         private readonly IPluginAssemblyStore _pluginAssemblyStore;
         private readonly IMatchExecutor _matchExecutor;
         private readonly IPreservationManager _preservationManager;
-        private readonly IUserManager _userManager; 
+        private readonly IUserManager _userManager;
         private readonly ILogger<DeathmatchPlugin> _logger;
         private readonly IConfiguration _configuration;
         private readonly IStringLocalizer _stringLocalizer;
@@ -39,7 +39,7 @@ namespace Deathmatch.Core
 
         public DeathmatchPlugin(IMatchManager matchManager,
             IPluginAssemblyStore pluginAssemblyStore,
-            IMatchExecutor matchExecutor, 
+            IMatchExecutor matchExecutor,
             IPreservationManager preservationManager,
             IUserManager userManager,
             ILogger<DeathmatchPlugin> logger,
@@ -57,7 +57,7 @@ namespace Deathmatch.Core
             _stringLocalizer = stringLocalizer;
             _serviceProvider = serviceProvider;
         }
-        
+
         protected override async UniTask OnLoadAsync()
         {
             foreach (var pluginAssembly in _pluginAssemblyStore.LoadedPluginAssemblies)
@@ -99,7 +99,7 @@ namespace Deathmatch.Core
 
             foreach (var registration in matchRegistrations)
             {
-                _logger.LogInformation(_stringLocalizer["logs:registered_match", new {Registration = registration}]);
+                _logger.LogInformation(_stringLocalizer["logs:registered_match", new { Registration = registration }]);
             }
 
             _cancellationTokenSource = new CancellationTokenSource();
@@ -150,7 +150,7 @@ namespace Deathmatch.Core
             if (delay <= 0) return;
 
             var announcements = _configuration.GetSection("AutoAnnouncements").Get<List<AutoAnnouncement>>() ??
-                                new List<AutoAnnouncement>();           
+                                new List<AutoAnnouncement>();
 
             // Sorts descending
             announcements.Sort((x, y) => y.SecondsBefore.CompareTo(x.SecondsBefore));
@@ -159,7 +159,8 @@ namespace Deathmatch.Core
 
             announcements.Add(new AutoAnnouncement()
             {
-                SecondsBefore = 0, MessageTime = null
+                SecondsBefore = 0,
+                MessageTime = null
             });
 
             var delays = new List<Tuple<int, string>>();
@@ -207,7 +208,7 @@ namespace Deathmatch.Core
                         if (message != null)
                             await _userManager.BroadcastAsync(KnownActorTypes.Player,
                                 _stringLocalizer["announcements:planned_match",
-                                    new {Match = registration, Time = message}]);
+                                    new { Match = registration, Time = message }]);
                     }
 
                     await _matchExecutor.StartMatch(registration);

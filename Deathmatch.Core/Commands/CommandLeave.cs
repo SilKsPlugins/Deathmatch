@@ -35,7 +35,7 @@ namespace Deathmatch.Core.Commands
             var player = _playerManager.GetPlayer(x => x.SteamId == user.SteamId);
 
             if (player == null) return;
-            
+
             await _matchExecutor.RemoveParticipant(player);
         }
     }

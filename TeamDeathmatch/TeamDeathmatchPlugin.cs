@@ -3,7 +3,6 @@ using Deathmatch.Core.Loadouts;
 using Deathmatch.Core.Spawns;
 using Microsoft.Extensions.Configuration;
 using OpenMod.API.Plugins;
-using OpenMod.Core.Helpers;
 using OpenMod.Unturned.Plugins;
 using System;
 using System.Collections.Generic;

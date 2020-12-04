@@ -75,7 +75,7 @@ namespace Deathmatch.Core.Matches
                     {
                         @event.CommandContext.Exception = new UserFriendlyException(
                             _stringLocalizer["commands:disabled_during_match",
-                                new {Command = @event.CommandContext.CommandAlias}]);
+                                new { Command = @event.CommandContext.CommandAlias }]);
                     }
                 }
             }

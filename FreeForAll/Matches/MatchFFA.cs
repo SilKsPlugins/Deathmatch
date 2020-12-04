@@ -202,7 +202,7 @@ namespace FreeForAll.Matches
                     winner = null;
                 }
             }
-            
+
             if (winner != null)
             {
                 await UserManager.BroadcastAsync(KnownActorTypes.Player,
@@ -218,7 +218,7 @@ namespace FreeForAll.Matches
             {
                 var winnerRewards =
                     Configuration.GetSection("Rewards:Winners").Get<List<ChanceItem>>() ?? new List<ChanceItem>();
-                var loserRewards = 
+                var loserRewards =
                     Configuration.GetSection("Rewards:Losers").Get<List<ChanceItem>>() ?? new List<ChanceItem>();
                 var tiedRewards =
                     Configuration.GetSection("Rewards:Tied").Get<List<ChanceItem>>() ?? new List<ChanceItem>();

@@ -1,7 +1,5 @@
-﻿using System.Collections.Generic;
-using Deathmatch.API.Matches;
-using OpenMod.API.Ioc;
-using OpenMod.Unturned.Users;
+﻿using OpenMod.API.Ioc;
+using System.Collections.Generic;
 
 namespace Deathmatch.API.Loadouts
 {

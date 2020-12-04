@@ -18,7 +18,7 @@ namespace Deathmatch.Core.Preservation.Inventory
                 _inventoryPages.Add(new PreservedInventoryPage(page, inventory.items[page]));
             }
         }
-        
+
         public void Restore(PlayerInventory inventory)
         {
             foreach (var page in _inventoryPages)

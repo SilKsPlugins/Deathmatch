@@ -1,7 +1,6 @@
 ﻿using Deathmatch.API.Matches;
 using Microsoft.Extensions.DependencyInjection;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 
@@ -10,7 +9,7 @@ namespace Deathmatch.Core.Matches
     public class RegisteredMatch : RegisteredMatchInfo, IMatchRegistration
     {
         public Type MatchType { get; }
-        
+
         public IMatch Instantiate(IServiceProvider serviceProvider)
         {
             return (IMatch)ActivatorUtilities.CreateInstance(serviceProvider, MatchType);
