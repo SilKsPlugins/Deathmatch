@@ -13,6 +13,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FreeForAll", "FreeForAll\Fr
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Deathmatch.Hub", "Deathmatch.Hub\Deathmatch.Hub.csproj", "{89FE3393-7CD7-45B3-AA3B-D45AB8244788}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Deathmatch.Addons", "Deathmatch.Addons\Deathmatch.Addons.csproj", "{8C79971D-70FC-4811-8C48-DA137142E02B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -83,6 +85,18 @@ Global
 		{89FE3393-7CD7-45B3-AA3B-D45AB8244788}.Release|x64.Build.0 = Release|Any CPU
 		{89FE3393-7CD7-45B3-AA3B-D45AB8244788}.Release|x86.ActiveCfg = Release|Any CPU
 		{89FE3393-7CD7-45B3-AA3B-D45AB8244788}.Release|x86.Build.0 = Release|Any CPU
+		{8C79971D-70FC-4811-8C48-DA137142E02B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8C79971D-70FC-4811-8C48-DA137142E02B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8C79971D-70FC-4811-8C48-DA137142E02B}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{8C79971D-70FC-4811-8C48-DA137142E02B}.Debug|x64.Build.0 = Debug|Any CPU
+		{8C79971D-70FC-4811-8C48-DA137142E02B}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{8C79971D-70FC-4811-8C48-DA137142E02B}.Debug|x86.Build.0 = Debug|Any CPU
+		{8C79971D-70FC-4811-8C48-DA137142E02B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8C79971D-70FC-4811-8C48-DA137142E02B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8C79971D-70FC-4811-8C48-DA137142E02B}.Release|x64.ActiveCfg = Release|Any CPU
+		{8C79971D-70FC-4811-8C48-DA137142E02B}.Release|x64.Build.0 = Release|Any CPU
+		{8C79971D-70FC-4811-8C48-DA137142E02B}.Release|x86.ActiveCfg = Release|Any CPU
+		{8C79971D-70FC-4811-8C48-DA137142E02B}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
