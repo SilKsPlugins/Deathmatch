@@ -91,6 +91,15 @@ namespace Deathmatch.Core.Players
         public PlayerLife Life => Player.life;
         public bool IsDead => Life.isDead;
 
+        public void Heal()
+        {
+            Life.askHeal(100, true, true);
+            Life.serverModifyFood(100);
+            Life.serverModifyWater(100);
+            Life.serverModifyStamina(100);
+            Life.serverModifyVirus(100);
+        }
+
         public PlayerMovement Movement => Player.movement;
 
         public PlayerQuests Quests => Player.quests;
