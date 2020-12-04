@@ -2,3 +2,4 @@
 DisabledAddons:
 #- NoDurability # This addon will disable all weapon durabilities on the entire server
 #- MaxSkills # This addon gives players in active matches max skills
+#- NoDeathDrops # This addon disables death drops by players in active matches
