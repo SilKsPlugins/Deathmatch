@@ -49,7 +49,7 @@ namespace Deathmatch.Addons
             {
                 try
                 {
-                    var addon = (IAddon)ActivatorUtilities.CreateInstance(_serviceProvider, type, this);
+                    var addon = (IAddon)ActivatorUtilities.CreateInstance(_serviceProvider, type);
 
                     if (disabledAddons.Any(x => x.Equals(addon.Title, StringComparison.OrdinalIgnoreCase)))
                     {
