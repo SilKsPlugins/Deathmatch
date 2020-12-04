@@ -10,6 +10,9 @@ KillThreshold: 30
 # Zero for unlimited duration
 MaxDuration: 600
 
+# Grace period after spawning in seconds
+GracePeriod: 2
+
 Loadouts:
 - Title: Main
   Items:

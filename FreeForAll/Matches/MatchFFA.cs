@@ -1,6 +1,7 @@
 ﻿using Cysharp.Threading.Tasks;
 using Deathmatch.API.Matches;
 using Deathmatch.API.Players;
+using Deathmatch.Core.Grace;
 using Deathmatch.Core.Helpers;
 using Deathmatch.Core.Items;
 using Deathmatch.Core.Loadouts;
@@ -32,15 +33,18 @@ namespace FreeForAll.Matches
     {
         private readonly IPluginAccessor<FreeForAllPlugin> _pluginAccessor;
         private readonly ILogger<MatchFFA> _logger;
+        private readonly IGraceManager _graceManager;
 
         private CancellationTokenSource _tokenSource;
 
         public MatchFFA(IPluginAccessor<FreeForAllPlugin> pluginAccessor,
             ILogger<MatchFFA> logger,
+            IGraceManager graceManager,
             IServiceProvider serviceProvider) : base(serviceProvider)
         {
             _pluginAccessor = pluginAccessor;
             _logger = logger;
+            _graceManager = graceManager;
         }
 
         public IReadOnlyCollection<PlayerSpawn> GetSpawns() => _pluginAccessor.Instance.Spawns;
@@ -102,6 +106,17 @@ namespace FreeForAll.Matches
             }
         }
 
+        public void SpawnPlayer(IGamePlayer player, PlayerSpawn spawn)
+        {
+            spawn.SpawnPlayer(player);
+
+            player.Heal();
+
+            GiveLoadout(player);
+
+            _graceManager.GrantGracePeriod(player, Configuration.GetValue<float>("GracePeriod", 2));
+        }
+
         public override async UniTask AddPlayer(IGamePlayer player)
         {
             await UniTask.SwitchToMainThread();
@@ -112,15 +127,11 @@ namespace FreeForAll.Matches
 
             if (!IsRunning) return;
 
-            PlayerSpawn spawn = GetFurthestSpawn();
+            var spawn = GetFurthestSpawn();
 
             await PreservationManager.PreservePlayer(player);
 
-            spawn.SpawnPlayer(player);
-
-            player.Heal();
-
-            GiveLoadout(player);
+            SpawnPlayer(player, spawn);
         }
 
         public override async UniTask AddPlayers(IEnumerable<IGamePlayer> players)
@@ -172,11 +183,7 @@ namespace FreeForAll.Matches
             {
                 await PreservationManager.PreservePlayer(player);
 
-                spawns[spawnIndex++].SpawnPlayer(player);
-
-                player.Heal();
-
-                GiveLoadout(player);
+                SpawnPlayer(player, spawns[spawnIndex++]);
             }
 
             _tokenSource = new CancellationTokenSource();
@@ -294,15 +301,11 @@ namespace FreeForAll.Matches
 
             var player = GetPlayer(nativePlayer);
 
-            if (player == null) return;
-
             cancel = true;
 
             var spawn = GetFurthestSpawn();
 
-            spawn.SpawnPlayer(player.User.Player.Player);
-
-            GetLoadout(player)?.GiveToPlayer(player);
+            SpawnPlayer(player, spawn);
         }
 
         public async Task HandleEventAsync(object sender, UnturnedPlayerDeathEvent @event)
