@@ -1,3 +1,4 @@
 # To disable an addon, remove the '#' at the beginning of the line
 DisabledAddons:
 #- NoDurability # This addon will disable all weapon durabilities on the entire server
+#- MaxSkills # This addon gives players in active matches max skills
