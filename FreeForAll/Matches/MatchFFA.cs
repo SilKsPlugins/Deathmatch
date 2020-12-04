@@ -16,10 +16,11 @@ using OpenMod.Unturned.Players.Life.Events;
 using SDG.Unturned;
 using System;
 using System.Collections.Generic;
-using System.Drawing;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using UnityEngine;
+using Color = System.Drawing.Color;
 
 namespace FreeForAll.Matches
 {
@@ -43,6 +44,40 @@ namespace FreeForAll.Matches
         }
 
         public IReadOnlyCollection<PlayerSpawn> GetSpawns() => _pluginAccessor.Instance.Spawns;
+
+        public PlayerSpawn GetFurthestSpawn()
+        {
+            var enemyPoints = GetPlayers().Where(x => !x.IsDead).Select(x => x.Transform.position);
+
+            float TotalMagnitude(Vector3 point, IEnumerable<Vector3> others)
+            {
+                float total = 0;
+
+                foreach (var other in others)
+                {
+                    total += (other - point).sqrMagnitude;
+                }
+
+                return total;
+            }
+
+            var spawns = GetSpawns().ToList().Shuffle();
+
+            PlayerSpawn best = null;
+            float bestDist = 0;
+
+            foreach (var spawn in spawns)
+            {
+                var dist = TotalMagnitude(spawn.ToVector3(), enemyPoints);
+
+                if (dist < bestDist) continue;
+
+                best = spawn;
+                bestDist = dist;
+            }
+
+            return best;
+        }
 
         public Loadout GetLoadout(IGamePlayer player)
         {
@@ -77,7 +112,7 @@ namespace FreeForAll.Matches
 
             if (!IsRunning) return;
 
-            PlayerSpawn spawn = GetSpawns().RandomElement();
+            PlayerSpawn spawn = GetFurthestSpawn();
 
             await PreservationManager.PreservePlayer(player);
 
@@ -263,9 +298,7 @@ namespace FreeForAll.Matches
 
             cancel = true;
 
-            var spawns = GetSpawns();
-
-            PlayerSpawn spawn = spawns.RandomElement();
+            var spawn = GetFurthestSpawn();
 
             spawn.SpawnPlayer(player.User.Player.Player);
 
