@@ -62,7 +62,7 @@ namespace Deathmatch.Core.Players
             return _players.Where(predicate.Invoke).ToList().AsReadOnly();
         }
 
-        public IGamePlayer GetPlayer(UnturnedUser user) => GetPlayer(x => x.User.Equals(user));
+        public IGamePlayer GetPlayer(UnturnedUser user) => user == null ? null : GetPlayer(x => x.User.Equals(user));
 
         public IGamePlayer GetPlayer(Predicate<IGamePlayer> predicate)
         {
