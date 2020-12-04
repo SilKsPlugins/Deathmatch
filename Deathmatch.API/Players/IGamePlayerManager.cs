@@ -2,10 +2,10 @@
 using OpenMod.API.Users;
 using OpenMod.Unturned.Players;
 using OpenMod.Unturned.Users;
+using SDG.Unturned;
 using Steamworks;
 using System;
 using System.Collections.Generic;
-using SDG.Unturned;
 
 namespace Deathmatch.API.Players
 {

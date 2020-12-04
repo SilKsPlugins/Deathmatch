@@ -63,7 +63,7 @@ namespace Deathmatch.Addons
 
                     var eventListeners = type.GetInterfaces().Where(x =>
                         x.IsGenericType && x.GetGenericTypeDefinition().IsAssignableFrom(typeof(IAddonEventListener<>)));
-                    
+
                     foreach (var listener in eventListeners)
                     {
                         var eventType = listener.GetGenericArguments().Single();
