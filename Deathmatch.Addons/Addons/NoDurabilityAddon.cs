@@ -1,8 +1,8 @@
-﻿using System.Collections.Generic;
+﻿using Microsoft.Extensions.Logging;
+using SDG.Unturned;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using Microsoft.Extensions.Logging;
-using SDG.Unturned;
 
 namespace Deathmatch.Addons.Addons
 {
@@ -23,7 +23,7 @@ namespace Deathmatch.Addons.Addons
                 typeof(ItemBarrelAsset).GetField("_durability", BindingFlags.Instance | BindingFlags.NonPublic);
             _barrelAssets = new List<(ItemBarrelAsset asset, byte durability)>();
         }
-        
+
         public void Load()
         {
             Level.onPostLevelLoaded += OnLevelLoaded;
@@ -45,7 +45,7 @@ namespace Deathmatch.Addons.Addons
         private void OnLevelLoaded(int level)
         {
             var itemAssets = Assets.find(EAssetType.ITEM).OfType<ItemAsset>();
-            
+
             if (_barrelDurability == null)
             {
                 _logger.LogWarning("Cannot find barrel durability field, cannot change durability costs.");
