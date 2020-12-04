@@ -4,6 +4,7 @@ using OpenMod.Unturned.Users;
 using SDG.Unturned;
 using Steamworks;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using UnityEngine;
 
@@ -22,6 +23,11 @@ namespace Deathmatch.Core.Players
             User = user;
 
             _matchData = new Dictionary<string, object>();
+        }
+
+        public bool IsInActiveMatch()
+        {
+            return CurrentMatch != null && CurrentMatch.IsRunning;
         }
 
         public T GetMatchData<T>(string key)
@@ -105,6 +111,16 @@ namespace Deathmatch.Core.Players
         public PlayerQuests Quests => Player.quests;
 
         public PlayerSkills Skills => Player.skills;
+
+        public void MaxSkills(bool overpower = false)
+        {
+            foreach (var skill in Skills.skills.SelectMany(x => x))
+            {
+                skill.level = overpower ? byte.MaxValue : skill.max;
+            }
+
+            Skills.askSkills(SteamId);
+        }
 
         public PlayerStance Stance => Player.stance;
     }

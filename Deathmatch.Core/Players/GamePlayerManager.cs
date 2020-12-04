@@ -5,7 +5,10 @@ using OpenMod.API.Prioritization;
 using OpenMod.API.Users;
 using OpenMod.Core.Helpers;
 using OpenMod.Core.Users;
+using OpenMod.Unturned.Players;
 using OpenMod.Unturned.Users;
+using SDG.Unturned;
+using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -61,6 +64,12 @@ namespace Deathmatch.Core.Players
         {
             return _players.Where(predicate.Invoke).ToList().AsReadOnly();
         }
+
+        public IGamePlayer GetPlayer(CSteamID steamId) => GetPlayer(x => x.SteamId == steamId);
+
+        public IGamePlayer GetPlayer(Player player) => GetPlayer(player.channel.owner.playerID.steamID);
+
+        public IGamePlayer GetPlayer(UnturnedPlayer player) => player == null ? null : GetPlayer(player.SteamId);
 
         public IGamePlayer GetPlayer(UnturnedUser user) => user == null ? null : GetPlayer(x => x.User.Equals(user));
 

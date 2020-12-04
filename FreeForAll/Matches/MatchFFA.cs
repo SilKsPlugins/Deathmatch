@@ -1,6 +1,7 @@
 ﻿using Cysharp.Threading.Tasks;
 using Deathmatch.API.Matches;
 using Deathmatch.API.Players;
+using Deathmatch.Core.Grace;
 using Deathmatch.Core.Helpers;
 using Deathmatch.Core.Items;
 using Deathmatch.Core.Loadouts;
@@ -16,10 +17,11 @@ using OpenMod.Unturned.Players.Life.Events;
 using SDG.Unturned;
 using System;
 using System.Collections.Generic;
-using System.Drawing;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using UnityEngine;
+using Color = System.Drawing.Color;
 
 namespace FreeForAll.Matches
 {
@@ -31,18 +33,55 @@ namespace FreeForAll.Matches
     {
         private readonly IPluginAccessor<FreeForAllPlugin> _pluginAccessor;
         private readonly ILogger<MatchFFA> _logger;
+        private readonly IGraceManager _graceManager;
 
         private CancellationTokenSource _tokenSource;
 
         public MatchFFA(IPluginAccessor<FreeForAllPlugin> pluginAccessor,
             ILogger<MatchFFA> logger,
+            IGraceManager graceManager,
             IServiceProvider serviceProvider) : base(serviceProvider)
         {
             _pluginAccessor = pluginAccessor;
             _logger = logger;
+            _graceManager = graceManager;
         }
 
         public IReadOnlyCollection<PlayerSpawn> GetSpawns() => _pluginAccessor.Instance.Spawns;
+
+        public PlayerSpawn GetFurthestSpawn()
+        {
+            var enemyPoints = GetPlayers().Where(x => !x.IsDead).Select(x => x.Transform.position);
+
+            float TotalMagnitude(Vector3 point, IEnumerable<Vector3> others)
+            {
+                float total = 0;
+
+                foreach (var other in others)
+                {
+                    total += (other - point).sqrMagnitude;
+                }
+
+                return total;
+            }
+
+            var spawns = GetSpawns().ToList().Shuffle();
+
+            PlayerSpawn best = null;
+            float bestDist = 0;
+
+            foreach (var spawn in spawns)
+            {
+                var dist = TotalMagnitude(spawn.ToVector3(), enemyPoints);
+
+                if (dist < bestDist) continue;
+
+                best = spawn;
+                bestDist = dist;
+            }
+
+            return best;
+        }
 
         public Loadout GetLoadout(IGamePlayer player)
         {
@@ -67,6 +106,17 @@ namespace FreeForAll.Matches
             }
         }
 
+        public void SpawnPlayer(IGamePlayer player, PlayerSpawn spawn)
+        {
+            spawn.SpawnPlayer(player);
+
+            player.Heal();
+
+            GiveLoadout(player);
+
+            _graceManager.GrantGracePeriod(player, Configuration.GetValue<float>("GracePeriod", 2));
+        }
+
         public override async UniTask AddPlayer(IGamePlayer player)
         {
             await UniTask.SwitchToMainThread();
@@ -77,13 +127,11 @@ namespace FreeForAll.Matches
 
             if (!IsRunning) return;
 
-            PlayerSpawn spawn = GetSpawns().RandomElement();
+            var spawn = GetFurthestSpawn();
 
             await PreservationManager.PreservePlayer(player);
 
-            spawn.SpawnPlayer(player);
-
-            GiveLoadout(player);
+            SpawnPlayer(player, spawn);
         }
 
         public override async UniTask AddPlayers(IEnumerable<IGamePlayer> players)
@@ -135,9 +183,7 @@ namespace FreeForAll.Matches
             {
                 await PreservationManager.PreservePlayer(player);
 
-                spawns[spawnIndex++].SpawnPlayer(player);
-
-                GiveLoadout(player);
+                SpawnPlayer(player, spawns[spawnIndex++]);
             }
 
             _tokenSource = new CancellationTokenSource();
@@ -255,17 +301,11 @@ namespace FreeForAll.Matches
 
             var player = GetPlayer(nativePlayer);
 
-            if (player == null) return;
-
             cancel = true;
 
-            var spawns = GetSpawns();
+            var spawn = GetFurthestSpawn();
 
-            PlayerSpawn spawn = spawns.RandomElement();
-
-            spawn.SpawnPlayer(player.User.Player.Player);
-
-            GetLoadout(player)?.GiveToPlayer(player);
+            SpawnPlayer(player, spawn);
         }
 
         public async Task HandleEventAsync(object sender, UnturnedPlayerDeathEvent @event)

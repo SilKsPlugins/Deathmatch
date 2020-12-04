@@ -12,6 +12,7 @@ namespace Deathmatch.API.Players
         UnturnedUser User { get; }
 
         IMatch CurrentMatch { get; set; }
+        bool IsInActiveMatch();
 
         T GetMatchData<T>(string key);
         void SetMatchData<T>(string key, T value);
@@ -35,11 +36,15 @@ namespace Deathmatch.API.Players
         PlayerLife Life { get; }
         bool IsDead { get; }
 
+        void Heal();
+
         PlayerMovement Movement { get; }
 
         PlayerQuests Quests { get; }
 
         PlayerSkills Skills { get; }
+
+        void MaxSkills(bool overpower = false);
 
         PlayerStance Stance { get; }
     }
