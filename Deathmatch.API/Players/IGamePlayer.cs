@@ -35,6 +35,8 @@ namespace Deathmatch.API.Players
         PlayerLife Life { get; }
         bool IsDead { get; }
 
+        void Heal();
+
         PlayerMovement Movement { get; }
 
         PlayerQuests Quests { get; }
