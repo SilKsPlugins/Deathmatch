@@ -25,6 +25,11 @@ namespace Deathmatch.Core.Players
             _matchData = new Dictionary<string, object>();
         }
 
+        public bool IsInActiveMatch()
+        {
+            return CurrentMatch != null && CurrentMatch.IsRunning;
+        }
+
         public T GetMatchData<T>(string key)
         {
             if (_matchData.TryGetValue(key, out var value) && value is T data)
