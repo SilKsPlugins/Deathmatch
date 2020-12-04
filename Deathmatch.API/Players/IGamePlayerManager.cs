@@ -5,6 +5,7 @@ using OpenMod.Unturned.Users;
 using Steamworks;
 using System;
 using System.Collections.Generic;
+using SDG.Unturned;
 
 namespace Deathmatch.API.Players
 {
@@ -16,6 +17,7 @@ namespace Deathmatch.API.Players
 
         IGamePlayer GetPlayer(Predicate<IGamePlayer> predicate);
         IGamePlayer GetPlayer(CSteamID steamId);
+        IGamePlayer GetPlayer(Player player);
         IGamePlayer GetPlayer(UnturnedPlayer player);
         IGamePlayer GetPlayer(UnturnedUser user);
         IGamePlayer GetPlayer(string searchString, UserSearchMode searchMode);
