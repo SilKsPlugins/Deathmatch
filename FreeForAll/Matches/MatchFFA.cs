@@ -83,6 +83,8 @@ namespace FreeForAll.Matches
 
             spawn.SpawnPlayer(player);
 
+            player.Heal();
+
             GiveLoadout(player);
         }
 
@@ -136,6 +138,8 @@ namespace FreeForAll.Matches
                 await PreservationManager.PreservePlayer(player);
 
                 spawns[spawnIndex++].SpawnPlayer(player);
+
+                player.Heal();
 
                 GiveLoadout(player);
             }

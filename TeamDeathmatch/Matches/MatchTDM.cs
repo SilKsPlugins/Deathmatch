@@ -131,6 +131,8 @@ namespace TeamDeathmatch.Matches
 
             spawn.SpawnPlayer(player);
 
+            player.Heal();
+
             GiveLoadout(player);
         }
 
@@ -204,6 +206,8 @@ namespace TeamDeathmatch.Matches
                     blueSpawns[blueSpawnIndex++].SpawnPlayer(player.User);
                     blueSpawnIndex %= blueSpawns.Count;
                 }
+
+                player.Heal();
 
                 GiveLoadout(player);
             }
