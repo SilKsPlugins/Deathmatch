@@ -1,0 +1,10 @@
+commands:
+  hub:
+    success: "You've been teleported to the hub."
+    in_match: "Cannot go to hub during a match."
+    not_set: "There is no hub configured."
+
+  hub_set:
+    success: "Successfully set hub with radius {Radius} at your current position."
+
+too_far: "You've gone too far from the hub and have been teleported back."
