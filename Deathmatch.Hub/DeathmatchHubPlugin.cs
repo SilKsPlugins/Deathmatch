@@ -67,6 +67,9 @@ namespace Deathmatch.Hub
 
             var player = _playerManager.GetPlayer(x => x.SteamId == nativePlayer.channel.owner.playerID.steamID);
 
+            // Could happen before player is registered
+            if (player == null) return;
+
             if (player.CurrentMatch != null) return;
 
             if (Hub.DistSqr(player.Transform.position) > Hub.Radius * Hub.Radius)
