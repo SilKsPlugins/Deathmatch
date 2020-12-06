@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace Deathmatch.API.Loadouts
 {
@@ -6,6 +7,14 @@ namespace Deathmatch.API.Loadouts
     {
         string Title { get; }
 
-        List<ILoadout> GetLoadouts();
+        IReadOnlyCollection<string> Aliases { get; }
+
+        ILoadout GetLoadout(string title);
+        IReadOnlyCollection<ILoadout> GetLoadouts();
+
+        Task SaveLoadouts();
+
+        void AddLoadout(ILoadout loadout);
+        bool RemoveLoadout(ILoadout loadout);
     }
 }
