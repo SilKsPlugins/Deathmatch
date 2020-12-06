@@ -11,11 +11,32 @@ namespace Deathmatch.Core.Items
     {
         public string Id { get; set; }
 
-        public byte Amount { get; set; } = 1;
+        public byte Amount { get; set; }
 
-        public byte Quality { get; set; } = byte.MaxValue;
+        public byte Quality { get; set; }
 
-        public string State { get; set; } = null;
+        public string State { get; set; }
+
+        public Item()
+        {
+            Id = "";
+            Amount = 1;
+            Quality = byte.MaxValue;
+            State = null;
+        }
+
+        public Item(ushort id, byte amount, byte quality, byte[] state)
+        {
+            Id = id.ToString();
+            Amount = amount;
+            Quality = quality;
+            SetState(state);
+        }
+
+        public void SetState(byte[] state)
+        {
+            State = state == null ? null : string.Join(",", state);
+        }
 
         private ItemAsset _cachedAsset;
 
@@ -91,18 +112,21 @@ namespace Deathmatch.Core.Items
 
             for (int i = 0; i < Amount; i++)
             {
-                SDG.Unturned.Item item = new SDG.Unturned.Item(
+                var item = new SDG.Unturned.Item(
                     GetAsset().id,
                     GetAsset().amount,
                     100,
                     State == null
                         ? GetAsset().getState(EItemOrigin.ADMIN)
-                        : State.Split(',').Select(byte.Parse).ToArray());
+                        : State.Split(new[] {','}, StringSplitOptions.RemoveEmptyEntries).Select(byte.Parse).ToArray());
 
                 player.Inventory.forceAddItem(item, true);
             }
 
             return true;
         }
+
+        public static Item FromUnturnedItem(SDG.Unturned.Item unturnedItem) => new Item(unturnedItem.id,
+            unturnedItem.amount, unturnedItem.quality, unturnedItem.state);
     }
 }
