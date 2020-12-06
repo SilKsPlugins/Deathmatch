@@ -17,6 +17,10 @@ namespace Deathmatch.Core.Commands.Loadouts
     [CommandAlias("createl")]
     [CommandAlias("cloadout")]
     [CommandAlias("cl")]
+    [CommandAlias("addloadout")]
+    [CommandAlias("addl")]
+    [CommandAlias("aloadout")]
+    [CommandAlias("al")]
     [CommandSyntax("<game mode> <loadout>")]
     [CommandDescription("Creates a loadout from your current inventory.")]
     [CommandActor(typeof(UnturnedUser))]
@@ -58,6 +62,8 @@ namespace Deathmatch.Core.Commands.Loadouts
             }
 
             category.AddLoadout(newLoadout);
+
+            await category.SaveLoadouts();
 
             await PrintAsync(_stringLocalizer[
                 "commands:create_loadout:success" + (oldLoadout == null ? "" : "_overwrite"),
