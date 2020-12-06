@@ -10,7 +10,7 @@ using OpenMod.Unturned.Commands;
 using OpenMod.Unturned.Users;
 using System;
 
-namespace Deathmatch.Core.Commands
+namespace Deathmatch.Core.Commands.Loadouts
 {
     [Command("loadout", Priority = Priority.Normal)]
     [CommandAlias("l")]
