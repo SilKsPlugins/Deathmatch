@@ -3,3 +3,4 @@ DisabledAddons:
 #- AutoJoin # This addon makes players auto-join the match/match pool
 #- MaxSkills # This addon gives players in active matches max skills
 #- NoDeathDrops # This addon disables death drops by players in active matches
+#- FixedClothing # This addon forces players to keep their clothes on
