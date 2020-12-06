@@ -24,22 +24,16 @@ namespace Deathmatch.Core.Commands.Loadouts
     {
         private readonly IGamePlayerManager _playerManager;
         private readonly ILoadoutManager _loadoutManager;
-        private readonly ILoadoutSelector _loadoutSelector;
         private readonly IStringLocalizer _stringLocalizer;
-        private readonly IPermissionChecker _permissionChecker;
 
         public CommandCreateLoadout(IGamePlayerManager playerManager,
             ILoadoutManager loadoutManager,
-            ILoadoutSelector loadoutSelector,
             IStringLocalizer stringLocalizer,
-            IPermissionChecker permissionChecker,
             IServiceProvider serviceProvider) : base(serviceProvider)
         {
             _playerManager = playerManager;
             _loadoutManager = loadoutManager;
-            _loadoutSelector = loadoutSelector;
             _stringLocalizer = stringLocalizer;
-            _permissionChecker = permissionChecker;
         }
 
         protected override async UniTask OnExecuteAsync()
