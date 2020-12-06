@@ -18,6 +18,10 @@ commands:
     no_gamemode: "The specified game mode does not exist."
     no_loadout: "The specified loadout does not exist."
     no_permission: "You do not have permission to use this loadout."
+  loadouts:
+    success: "Loadouts ({GameMode}): {Loadouts:list:{}|, }"
+    none: "You do not have access to any loadouts."
+    none_gamemode: "You do not have access to any loadouts in the {GameMode} game mode."
 
 announcements:
   planned_match: "A game of {Match.Title} will start in {Time}! Make sure to /join!"
