@@ -1,5 +1,6 @@
 ﻿using Deathmatch.API.Players;
 using Deathmatch.Core.Preservation.Clothing;
+using Deathmatch.Core.Preservation.Groups;
 using Deathmatch.Core.Preservation.Inventory;
 using Deathmatch.Core.Preservation.Life;
 using Deathmatch.Core.Preservation.Skills;
@@ -26,9 +27,16 @@ namespace Deathmatch.Core.Preservation
 
         private readonly PreservedLife _life;
 
+        private readonly PreservedGroup _group;
+
         public PreservedPlayer(IGamePlayer player)
         {
             Player = player;
+
+            if (player.IsDead)
+            {
+                player.Player.life.askRespawn(player.SteamId, false);
+            }
 
             _position = player.Player.transform.position;
             _yaw = player.Transform.eulerAngles.y;
@@ -41,6 +49,8 @@ namespace Deathmatch.Core.Preservation
             _skills = new PreservedSkills(player.Skills);
 
             _life = new PreservedLife(player.Life);
+
+            _group = new PreservedGroup(player.Quests);
 
             player.Player.save();
         }
@@ -81,6 +91,9 @@ namespace Deathmatch.Core.Preservation
 
             // Life
             _life.Restore(Player.Life);
+
+            // Group
+            _group.Restore(Player.Quests);
         }
     }
 }

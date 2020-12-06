@@ -13,6 +13,22 @@ commands:
   leave:
     success: "Successfully left the match/match pool."
     already: "You're not a part of the match/match pool."
+  loadout:
+    success: "Successfully selected the {Loadout} loadout for the game mode {GameMode}."
+    no_gamemode: "The specified game mode does not exist."
+    no_loadout: "The specified loadout does not exist."
+    no_permission: "You do not have permission to use this loadout."
+  loadouts:
+    success: "Loadouts ({GameMode}): {Loadouts:list:{}|, }"
+    none: "You do not have access to any loadouts."
+    none_gamemode: "You do not have access to any loadouts in the {GameMode} game mode."
+  create_loadout:
+    success: "Successfully created the loadout {Loadout} for the game mode {GameMode}."
+    success_overwrite: "Successfully overwrote the loadout {Loadout} for the game mode {GameMode}."
+  delete_loadout:
+    success: "Successfully delete the loadout {Loadout} for the game mode {GameMode}."
+  give_loadout:
+    success: "Successfully gave yourself the loadout {Loadout} for the game mode {GameMode}."
 
 announcements:
   planned_match: "A game of {Match.Title} will start in {Time}! Make sure to /join!"

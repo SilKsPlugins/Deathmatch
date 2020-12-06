@@ -11,7 +11,6 @@ namespace Deathmatch.API.Loadouts
 
         void AddCategory(ILoadoutCategory category);
 
-        void RemoveCategory(string title);
         void RemoveCategory(ILoadoutCategory category);
     }
 }
