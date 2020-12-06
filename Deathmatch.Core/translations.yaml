@@ -13,6 +13,11 @@ commands:
   leave:
     success: "Successfully left the match/match pool."
     already: "You're not a part of the match/match pool."
+  loadout:
+    success: "Successfully selected the {Loadout} loadout for the game mode {GameMode}."
+    no_gamemode: "The specified game mode does not exist."
+    no_loadout: "The specified loadout does not exist."
+    no_permission: "You do not have permission to use this loadout."
 
 announcements:
   planned_match: "A game of {Match.Title} will start in {Time}! Make sure to /join!"
