@@ -25,6 +25,10 @@ commands:
   create_loadout:
     success: "Successfully created the loadout {Loadout} for the game mode {GameMode}."
     success_overwrite: "Successfully overwrote the loadout {Loadout} for the game mode {GameMode}."
+  delete_loadout:
+    success: "Successfully delete the loadout {Loadout} for the game mode {GameMode}."
+  give_loadout:
+    success: "Successfully gave yourself the loadout {Loadout} for the game mode {GameMode}."
 
 announcements:
   planned_match: "A game of {Match.Title} will start in {Time}! Make sure to /join!"
