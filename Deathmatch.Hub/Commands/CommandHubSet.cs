@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 namespace Deathmatch.Hub.Commands
 {
     [Command("set")]
-    [CommandDescription("Sets the hub's center and radius")]
+    [CommandDescription("Sets the hub's center and radius.")]
     [CommandSyntax("<radius>")]
     [CommandActor(typeof(UnturnedUser))]
     [CommandParent(typeof(CommandHub))]
