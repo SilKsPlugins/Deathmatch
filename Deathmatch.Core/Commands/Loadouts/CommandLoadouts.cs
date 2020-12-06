@@ -27,7 +27,6 @@ namespace Deathmatch.Core.Commands.Loadouts
 
         public CommandLoadouts(IGamePlayerManager playerManager,
             ILoadoutManager loadoutManager,
-            ILoadoutSelector loadoutSelector,
             IStringLocalizer stringLocalizer,
             IPermissionChecker permissionChecker,
             IServiceProvider serviceProvider) : base(serviceProvider)
@@ -101,7 +100,7 @@ namespace Deathmatch.Core.Commands.Loadouts
                     else
                     {
                         await PrintAsync(_stringLocalizer["commands:loadouts:success",
-                            new { GameMode = category.Title, Loadouts = loadouts }]);
+                            new {GameMode = category.Title, Loadouts = loadouts}]);
                     }
                 }
             }
