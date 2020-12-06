@@ -1,4 +1,5 @@
 ﻿using Deathmatch.API.Loadouts;
+using OpenMod.API;
 using OpenMod.API.Persistence;
 using System;
 using System.Collections.Generic;
@@ -13,25 +14,20 @@ namespace Deathmatch.Core.Loadouts
 
         public IReadOnlyCollection<string> Aliases { get; }
 
+        public IOpenModComponent Component { get; }
+
         private readonly List<ILoadout> _loadouts;
         private readonly IDataStore _dataStore;
 
-        public LoadoutCategory(string title, IReadOnlyCollection<string> aliases, IDataStore dataStore)
+        public LoadoutCategory(string title, IReadOnlyCollection<string> aliases, IOpenModComponent component, IDataStore dataStore, List<ILoadout> loadouts = null)
         {
             Title = title;
             Aliases = aliases ?? new List<string>();
-            _loadouts = new List<ILoadout>();
 
+            Component = component;
             _dataStore = dataStore;
-        }
 
-        public LoadoutCategory(string title, IReadOnlyCollection<string> aliases, List<ILoadout> loadouts, IDataStore dataStore)
-        {
-            Title = title;
-            Aliases = aliases ?? new List<string>();
             _loadouts = loadouts ?? new List<ILoadout>();
-
-            _dataStore = dataStore;
         }
 
         public ILoadout GetLoadout(string title) =>
