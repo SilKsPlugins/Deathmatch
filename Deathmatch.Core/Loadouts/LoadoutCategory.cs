@@ -35,17 +35,19 @@ namespace Deathmatch.Core.Loadouts
 
         public IReadOnlyCollection<ILoadout> GetLoadouts() => _loadouts.AsReadOnly();
 
+        private const string DataStoreKey = "loadouts";
+
         public async Task LoadLoadouts()
         {
             _loadouts = new List<ILoadout>();
 
-            if (await _dataStore.ExistsAsync(Title))
+            if (await _dataStore.ExistsAsync(DataStoreKey))
             {
-                _loadouts.AddRange(await _dataStore.LoadAsync<List<Loadout>>(Title) ?? new List<Loadout>());
+                _loadouts.AddRange(await _dataStore.LoadAsync<List<Loadout>>(DataStoreKey) ?? new List<Loadout>());
             }
         }
 
-        public Task SaveLoadouts() => _dataStore.SaveAsync(Title, _loadouts.OfType<Loadout>().ToList());
+        public Task SaveLoadouts() => _dataStore.SaveAsync(DataStoreKey, _loadouts.OfType<Loadout>().ToList());
 
         public void AddLoadout(ILoadout loadout)
         {
