@@ -43,13 +43,13 @@ namespace Deathmatch.Addons
         {
             var addonTypes = GetType().Assembly.FindTypes<IAddon>(false).ToList();
 
-            var disabledAddons = _configuration.GetSection("DisabledAddons").Get<string[]>();
+            var disabledAddons = _configuration.GetSection("DisabledAddons").Get<string[]>() ?? new string[0];
 
             foreach (var type in addonTypes)
             {
                 try
                 {
-                    var addon = (IAddon)ActivatorUtilities.CreateInstance(_serviceProvider, type, this);
+                    var addon = (IAddon)ActivatorUtilities.CreateInstance(_serviceProvider, type);
 
                     if (disabledAddons.Any(x => x.Equals(addon.Title, StringComparison.OrdinalIgnoreCase)))
                     {
