@@ -64,8 +64,6 @@ namespace Deathmatch.Core.Players
 
                 await _eventBus.EmitAsync(_runtime, this, new GamePlayerConnectedEvent(player));
             }
-
-            return Task.CompletedTask;
         }
 
         private Task OnUserDisconnected(IServiceProvider serviceProvider, object sender, UnturnedUserDisconnectedEvent @event)
