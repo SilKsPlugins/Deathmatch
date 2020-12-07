@@ -66,17 +66,15 @@ namespace Deathmatch.Core.Players
             }
         }
 
-        private Task OnUserDisconnected(IServiceProvider serviceProvider, object sender, UnturnedUserDisconnectedEvent @event)
+        private async Task OnUserDisconnected(IServiceProvider serviceProvider, object sender, UnturnedUserDisconnectedEvent @event)
         {
             var player = GetPlayer(@event.User);
 
             if (player != null)
             {
-                _eventBus.EmitAsync(_runtime, this, new GamePlayerDisconnectedEvent(player));
+                await _eventBus.EmitAsync(_runtime, this, new GamePlayerDisconnectedEvent(player));
                 _players.RemoveAll(x => x.SteamId == @event.User.SteamId);
             }
-
-            return Task.CompletedTask;
         }
 
         public IReadOnlyCollection<IGamePlayer> GetPlayers()
