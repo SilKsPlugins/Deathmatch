@@ -1,6 +1,7 @@
 ﻿using Deathmatch.API.Loadouts;
 using Deathmatch.API.Players;
 using Deathmatch.API.Players.Events;
+using Deathmatch.Core.Players.Events;
 using Microsoft.Extensions.DependencyInjection;
 using OpenMod.API;
 using OpenMod.API.Eventing;
@@ -32,7 +33,7 @@ namespace Deathmatch.Core.Loadouts
 
             _loadoutSelections = new Dictionary<IGamePlayer, List<LoadoutSelection>>();
 
-            eventBus.Subscribe(runtime, (EventCallback<IGamePlayerConnectedEvent>)OnGamePlayerConnected);
+            eventBus.Subscribe(runtime, (EventCallback<GamePlayerConnectedEvent>)OnGamePlayerConnected);
             eventBus.Subscribe(runtime, (EventCallback<IGamePlayerDisconnectedEvent>)OnGamePlayerDisconnected);
         }
 
@@ -75,7 +76,7 @@ namespace Deathmatch.Core.Loadouts
 
         private const string LoadoutSelectionsKey = "LoadoutSelections";
 
-        private async Task OnGamePlayerConnected(IServiceProvider serviceProvider, object sender, IGamePlayerConnectedEvent @event)
+        private async Task OnGamePlayerConnected(IServiceProvider serviceProvider, object sender, GamePlayerConnectedEvent @event)
         {
             var player = @event.Player;
             
