@@ -21,7 +21,7 @@ namespace Deathmatch.Core.Loadouts
         private readonly ILoadoutManager _loadoutManager;
         private readonly IUserDataStore _userDataStore;
 
-        private readonly Dictionary<IGamePlayer, List<LoadoutSelection>> _loadoutSelections;
+        private readonly Dictionary<IGamePlayer, LoadoutSelections> _loadoutSelections;
 
         public LoadoutSelector(ILoadoutManager loadoutManager,
             IUserDataStore userDataStore,
@@ -32,7 +32,7 @@ namespace Deathmatch.Core.Loadouts
             _loadoutManager = loadoutManager;
             _userDataStore = userDataStore;
 
-            _loadoutSelections = new Dictionary<IGamePlayer, List<LoadoutSelection>>();
+            _loadoutSelections = new Dictionary<IGamePlayer, LoadoutSelections>();
 
             AsyncHelper.RunSync(async () =>
             {
@@ -52,7 +52,7 @@ namespace Deathmatch.Core.Loadouts
 
             if (loadoutCategory == null) return null;
 
-            var loadoutTitle = _loadoutSelections[player]
+            var loadoutTitle = _loadoutSelections[player].Selections
                 .FirstOrDefault(x => x.GameMode.Equals(category, StringComparison.OrdinalIgnoreCase))?.Loadout;
 
             return loadoutTitle == null ? null : loadoutCategory.GetLoadout(loadoutTitle);
@@ -62,7 +62,9 @@ namespace Deathmatch.Core.Loadouts
         {
             var selections = _loadoutSelections[player];
 
-            var selection = selections.FirstOrDefault(x => x.GameMode.Equals(category, StringComparison.OrdinalIgnoreCase));
+            var selection =
+                selections.Selections.FirstOrDefault(x =>
+                    x.GameMode.Equals(category, StringComparison.OrdinalIgnoreCase));
 
             if (selection == null)
             {
@@ -72,7 +74,7 @@ namespace Deathmatch.Core.Loadouts
                     Loadout = loadout
                 };
 
-                selections.Add(selection);
+                selections.Selections.Add(selection);
             }
             else
             {
@@ -88,12 +90,10 @@ namespace Deathmatch.Core.Loadouts
         private async Task LoadPlayer(IGamePlayer player)
         {
             var selections =
-                await _userDataStore.GetUserDataAsync<List<LoadoutSelection>>(player.User.Id, player.User.Type,
+                await _userDataStore.GetUserDataAsync<LoadoutSelections>(player.User.Id, player.User.Type,
                     LoadoutSelectionsKey);
-
-            selections ??= new List<LoadoutSelection>();
-
-            _loadoutSelections.Add(player, selections);
+            
+            _loadoutSelections.Add(player, selections ?? new LoadoutSelections());
         }
 
         private async Task SavePlayer(IGamePlayer player)
