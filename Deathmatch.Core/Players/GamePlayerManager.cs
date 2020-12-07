@@ -48,11 +48,13 @@ namespace Deathmatch.Core.Players
                     var player = new GamePlayer(user);
 
                     _players.Add(player);
+
+                    await _eventBus.EmitAsync(_runtime, this, new GamePlayerConnectedEvent(player));
                 }
             });
         }
 
-        private Task OnUserConnected(IServiceProvider serviceProvider, object sender, UnturnedUserConnectedEvent @event)
+        private async Task OnUserConnected(IServiceProvider serviceProvider, object sender, UnturnedUserConnectedEvent @event)
         {
             if (_players.All(x => x.SteamId != @event.User.SteamId))
             {
@@ -60,7 +62,7 @@ namespace Deathmatch.Core.Players
 
                 _players.Add(player);
 
-                _eventBus.EmitAsync(_runtime, this, new GamePlayerConnectedEvent(player));
+                await _eventBus.EmitAsync(_runtime, this, new GamePlayerConnectedEvent(player));
             }
 
             return Task.CompletedTask;
