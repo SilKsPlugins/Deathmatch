@@ -2,7 +2,7 @@
 
 namespace Deathmatch.Core.Players.Events
 {
-    public class GamePlayerDisconnectedEvent : GamePlayerEvent
+    public class GamePlayerDisconnectedEvent : GamePlayerEvent, IGamePlayerDisconnectedEvent
     {
         public GamePlayerDisconnectedEvent(IGamePlayer player) : base(player)
         {
