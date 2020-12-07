@@ -3,13 +3,14 @@ using Deathmatch.API.Loadouts;
 using Deathmatch.Core.Loadouts;
 using Deathmatch.Core.Spawns;
 using Microsoft.Extensions.Configuration;
+using OpenMod.API.Permissions;
+using OpenMod.API.Persistence;
 using OpenMod.API.Plugins;
 using OpenMod.Unturned.Plugins;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
-using OpenMod.API.Permissions;
-using OpenMod.API.Persistence;
 
 [assembly: PluginMetadata("TeamDeathmatch", DisplayName = "Team Deathmatch")]
 namespace TeamDeathmatch
@@ -50,9 +51,9 @@ namespace TeamDeathmatch
                 _dataStore);
             await category.LoadLoadouts();
 
-            foreach (var loadout in category.GetLoadouts())
+            foreach (var loadout in category.GetLoadouts().OfType<Loadout>())
             {
-                _permissionRegistry.RegisterPermission(this, loadout.Permission);
+                _permissionRegistry.RegisterPermission(this, loadout.GetPermissionWithoutComponent());
             }
 
             _loadoutManager.AddCategory(category);

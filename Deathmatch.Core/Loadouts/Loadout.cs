@@ -30,6 +30,13 @@ namespace Deathmatch.Core.Loadouts
             Items = items ?? new List<Item>();
         }
 
+        public string GetPermissionWithoutComponent()
+        {
+            var index = Permission.IndexOf(':');
+
+            return index < 0 ? Permission : Permission.Substring(index + 1);
+        }
+
         public void GiveToPlayer(IGamePlayer player)
         {
             if (player.IsDead) return;
