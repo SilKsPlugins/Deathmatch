@@ -1,13 +1,13 @@
 ﻿using Deathmatch.API.Loadouts;
 using Deathmatch.API.Players;
 using Deathmatch.API.Players.Events;
-using Deathmatch.Core.Players.Events;
 using Microsoft.Extensions.DependencyInjection;
 using OpenMod.API;
 using OpenMod.API.Eventing;
 using OpenMod.API.Ioc;
 using OpenMod.API.Prioritization;
 using OpenMod.API.Users;
+using OpenMod.Core.Helpers;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -25,6 +25,7 @@ namespace Deathmatch.Core.Loadouts
 
         public LoadoutSelector(ILoadoutManager loadoutManager,
             IUserDataStore userDataStore,
+            IGamePlayerManager playerManager,
             IEventBus eventBus,
             IRuntime runtime)
         {
@@ -33,7 +34,15 @@ namespace Deathmatch.Core.Loadouts
 
             _loadoutSelections = new Dictionary<IGamePlayer, List<LoadoutSelection>>();
 
-            eventBus.Subscribe(runtime, (EventCallback<GamePlayerConnectedEvent>)OnGamePlayerConnected);
+            AsyncHelper.RunSync(async () =>
+            {
+                foreach (var player in playerManager.GetPlayers())
+                {
+                    await LoadPlayer(player);
+                }
+            });
+
+            eventBus.Subscribe(runtime, (EventCallback<IGamePlayerConnectedEvent>)OnGamePlayerConnected);
             eventBus.Subscribe(runtime, (EventCallback<IGamePlayerDisconnectedEvent>)OnGamePlayerDisconnected);
         }
 
@@ -76,10 +85,8 @@ namespace Deathmatch.Core.Loadouts
 
         private const string LoadoutSelectionsKey = "LoadoutSelections";
 
-        private async Task OnGamePlayerConnected(IServiceProvider serviceProvider, object sender, GamePlayerConnectedEvent @event)
+        private async Task LoadPlayer(IGamePlayer player)
         {
-            var player = @event.Player;
-            
             var selections =
                 await _userDataStore.GetUserDataAsync<List<LoadoutSelection>>(player.User.Id, player.User.Type,
                     LoadoutSelectionsKey);
@@ -89,14 +96,18 @@ namespace Deathmatch.Core.Loadouts
             _loadoutSelections.Add(player, selections);
         }
 
-        private async Task OnGamePlayerDisconnected(IServiceProvider serviceProvider, object sender, IGamePlayerDisconnectedEvent @event)
+        private async Task SavePlayer(IGamePlayer player)
         {
-            var player = @event.Player;
-
             await _userDataStore.SetUserDataAsync(player.User.Id, player.User.Type, LoadoutSelectionsKey,
                 _loadoutSelections[player]);
 
             _loadoutSelections.Remove(player);
         }
+
+        private Task OnGamePlayerConnected(IServiceProvider serviceProvider, object sender,
+            IGamePlayerConnectedEvent @event) => LoadPlayer(@event.Player);
+
+        private Task OnGamePlayerDisconnected(IServiceProvider serviceProvider, object sender,
+            IGamePlayerDisconnectedEvent @event) => SavePlayer(@event.Player);
     }
 }
