@@ -1,7 +1,10 @@
 ﻿using Cysharp.Threading.Tasks;
+using Deathmatch.API.Loadouts;
 using Deathmatch.Core.Loadouts;
 using Deathmatch.Core.Spawns;
 using Microsoft.Extensions.Configuration;
+using OpenMod.API.Permissions;
+using OpenMod.API.Persistence;
 using OpenMod.API.Plugins;
 using OpenMod.Unturned.Plugins;
 using System;
@@ -16,13 +19,22 @@ namespace FreeForAll
         public const string SpawnsKey = "spawns";
 
         private readonly IConfiguration _configuration;
+        private readonly ILoadoutManager _loadoutManager;
+        private readonly IDataStore _dataStore;
+        private readonly IPermissionRegistry _permissionRegistry;
 
         private readonly List<PlayerSpawn> _spawns;
 
         public FreeForAllPlugin(IConfiguration configuration,
+            ILoadoutManager loadoutManager,
+            IDataStore dataStore,
+            IPermissionRegistry permissionRegistry,
             IServiceProvider serviceProvider) : base(serviceProvider)
         {
             _configuration = configuration;
+            _loadoutManager = loadoutManager;
+            _dataStore = dataStore;
+            _permissionRegistry = permissionRegistry;
 
             _spawns = new List<PlayerSpawn>();
         }
@@ -30,6 +42,17 @@ namespace FreeForAll
         protected override async UniTask OnLoadAsync()
         {
             await ReloadSpawns();
+
+            var category =
+                new LoadoutCategory("FreeForAll", new List<string> {"Free For All", "FFA"}, this, _dataStore);
+            await category.LoadLoadouts();
+
+            foreach (var loadout in category.GetLoadouts())
+            {
+                _permissionRegistry.RegisterPermission(this, loadout.Permission);
+            }
+
+            _loadoutManager.AddCategory(category);
         }
 
         protected override UniTask OnUnloadAsync()

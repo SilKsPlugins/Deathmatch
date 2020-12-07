@@ -1,4 +1,5 @@
 ﻿using Cysharp.Threading.Tasks;
+using Deathmatch.API.Loadouts;
 using Deathmatch.Core.Loadouts;
 using Deathmatch.Core.Spawns;
 using Microsoft.Extensions.Configuration;
@@ -7,6 +8,8 @@ using OpenMod.Unturned.Plugins;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using OpenMod.API.Permissions;
+using OpenMod.API.Persistence;
 
 [assembly: PluginMetadata("TeamDeathmatch", DisplayName = "Team Deathmatch")]
 namespace TeamDeathmatch
@@ -17,14 +20,23 @@ namespace TeamDeathmatch
         public const string BlueSpawnsKey = "bluespawns";
 
         private readonly IConfiguration _configuration;
+        private readonly ILoadoutManager _loadoutManager;
+        private readonly IDataStore _dataStore;
+        private readonly IPermissionRegistry _permissionRegistry;
 
         private readonly List<PlayerSpawn> _redSpawns;
         private readonly List<PlayerSpawn> _blueSpawns;
 
         public TeamDeathmatchPlugin(IConfiguration configuration,
+            ILoadoutManager loadoutManager,
+            IDataStore dataStore,
+            IPermissionRegistry permissionRegistry,
             IServiceProvider serviceProvider) : base(serviceProvider)
         {
             _configuration = configuration;
+            _loadoutManager = loadoutManager;
+            _dataStore = dataStore;
+            _permissionRegistry = permissionRegistry;
 
             _redSpawns = new List<PlayerSpawn>();
             _blueSpawns = new List<PlayerSpawn>();
@@ -33,6 +45,17 @@ namespace TeamDeathmatch
         protected override async UniTask OnLoadAsync()
         {
             await ReloadSpawns();
+
+            var category = new LoadoutCategory("TeamDeathmatch", new List<string> {"Team Deathmatch", "TDM"}, this,
+                _dataStore);
+            await category.LoadLoadouts();
+
+            foreach (var loadout in category.GetLoadouts())
+            {
+                _permissionRegistry.RegisterPermission(this, loadout.Permission);
+            }
+
+            _loadoutManager.AddCategory(category);
         }
 
         protected override UniTask OnUnloadAsync()

@@ -20,6 +20,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Deathmatch.API.Loadouts;
+using OpenMod.API.Permissions;
+using OpenMod.Core.Helpers;
 using UnityEngine;
 using Color = System.Drawing.Color;
 
@@ -33,17 +36,26 @@ namespace FreeForAll.Matches
     {
         private readonly IPluginAccessor<FreeForAllPlugin> _pluginAccessor;
         private readonly ILogger<MatchFFA> _logger;
+        private readonly ILoadoutManager _loadoutManager;
+        private readonly ILoadoutSelector _loadoutSelector;
+        private readonly IPermissionChecker _permissionChecker;
         private readonly IGraceManager _graceManager;
 
         private CancellationTokenSource _tokenSource;
 
         public MatchFFA(IPluginAccessor<FreeForAllPlugin> pluginAccessor,
             ILogger<MatchFFA> logger,
+            ILoadoutManager loadoutManager,
+            ILoadoutSelector loadoutSelector,
+            IPermissionChecker permissionChecker,
             IGraceManager graceManager,
             IServiceProvider serviceProvider) : base(serviceProvider)
         {
             _pluginAccessor = pluginAccessor;
             _logger = logger;
+            _loadoutManager = loadoutManager;
+            _loadoutSelector = loadoutSelector;
+            _permissionChecker = permissionChecker;
             _graceManager = graceManager;
         }
 
@@ -83,17 +95,24 @@ namespace FreeForAll.Matches
             return best;
         }
 
-        public Loadout GetLoadout(IGamePlayer player)
+        public async Task<ILoadout> GetLoadout(IGamePlayer player)
         {
-            string loadout = "Main";
+            const string category = "TeamDeathmatch";
 
-            return _pluginAccessor.Instance.Loadouts.FirstOrDefault(x =>
-                string.Equals(x.Title, loadout, StringComparison.OrdinalIgnoreCase));
+            var loadout = _loadoutSelector.GetLoadout(player, category);
+
+            if (loadout != null && await _permissionChecker.CheckPermissionAsync(player.User, loadout.Permission) ==
+                PermissionGrantResult.Grant)
+            {
+                return loadout;
+            }
+
+            return await _loadoutManager.GetRandomLoadout(category, player, _permissionChecker);
         }
 
-        public void GiveLoadout(IGamePlayer player)
+        public async Task GiveLoadout(IGamePlayer player)
         {
-            var loadout = GetLoadout(player);
+            var loadout = await GetLoadout(player);
 
             if (loadout == null)
             {
@@ -106,13 +125,13 @@ namespace FreeForAll.Matches
             }
         }
 
-        public void SpawnPlayer(IGamePlayer player, PlayerSpawn spawn)
+        public async Task SpawnPlayer(IGamePlayer player, PlayerSpawn spawn)
         {
             spawn.SpawnPlayer(player);
 
             player.Heal();
 
-            GiveLoadout(player);
+            await GiveLoadout(player);
 
             _graceManager.GrantGracePeriod(player, Configuration.GetValue<float>("GracePeriod", 2));
         }
@@ -131,7 +150,7 @@ namespace FreeForAll.Matches
 
             await PreservationManager.PreservePlayer(player);
 
-            SpawnPlayer(player, spawn);
+            await SpawnPlayer(player, spawn);
         }
 
         public override async UniTask AddPlayers(IEnumerable<IGamePlayer> players)
@@ -183,7 +202,7 @@ namespace FreeForAll.Matches
             {
                 await PreservationManager.PreservePlayer(player);
 
-                SpawnPlayer(player, spawns[spawnIndex++]);
+                await SpawnPlayer(player, spawns[spawnIndex++]);
             }
 
             _tokenSource = new CancellationTokenSource();
@@ -305,7 +324,7 @@ namespace FreeForAll.Matches
 
             var spawn = GetFurthestSpawn();
 
-            SpawnPlayer(player, spawn);
+            AsyncHelper.RunSync(() => SpawnPlayer(player, spawn));
         }
 
         public async Task HandleEventAsync(object sender, UnturnedPlayerDeathEvent @event)

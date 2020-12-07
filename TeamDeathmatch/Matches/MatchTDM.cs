@@ -1,4 +1,5 @@
 ﻿using Cysharp.Threading.Tasks;
+using Deathmatch.API.Loadouts;
 using Deathmatch.API.Matches;
 using Deathmatch.API.Players;
 using Deathmatch.Core.Grace;
@@ -10,7 +11,9 @@ using Deathmatch.Core.Spawns;
 using HarmonyLib;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using OpenMod.API.Permissions;
 using OpenMod.API.Plugins;
+using OpenMod.Core.Helpers;
 using OpenMod.Core.Users;
 using OpenMod.Unturned.Players.Life.Events;
 using SDG.Unturned;
@@ -34,6 +37,9 @@ namespace TeamDeathmatch.Matches
     {
         private readonly IPluginAccessor<TeamDeathmatchPlugin> _pluginAccessor;
         private readonly ILogger<MatchTDM> _logger;
+        private readonly ILoadoutManager _loadoutManager;
+        private readonly ILoadoutSelector _loadoutSelector;
+        private readonly IPermissionChecker _permissionChecker;
         private readonly IGraceManager _graceManager;
 
         private CancellationTokenSource _tokenSource;
@@ -43,11 +49,17 @@ namespace TeamDeathmatch.Matches
 
         public MatchTDM(IPluginAccessor<TeamDeathmatchPlugin> pluginAccessor,
             ILogger<MatchTDM> logger,
+            ILoadoutManager loadoutManager,
+            ILoadoutSelector loadoutSelector,
+            IPermissionChecker permissionChecker,
             IGraceManager graceManager,
             IServiceProvider serviceProvider) : base(serviceProvider)
         {
             _pluginAccessor = pluginAccessor;
             _logger = logger;
+            _loadoutManager = loadoutManager;
+            _loadoutSelector = loadoutSelector;
+            _permissionChecker = permissionChecker;
             _graceManager = graceManager;
 
             _redDeaths = 0;
@@ -69,28 +81,24 @@ namespace TeamDeathmatch.Matches
 
         public IReadOnlyCollection<PlayerSpawn> GetSpawns(IGamePlayer player) => GetSpawns(player.GetTeam());
 
-        public Loadout GetLoadout(IGamePlayer player)
+        public async Task<ILoadout> GetLoadout(IGamePlayer player)
         {
-            string loadout = null;
-            switch (player.GetTeam())
+            const string category = "TeamDeathmatch";
+
+            var loadout = _loadoutSelector.GetLoadout(player, category);
+            
+            if (loadout != null && await _permissionChecker.CheckPermissionAsync(player.User, loadout.Permission) ==
+                PermissionGrantResult.Grant)
             {
-                case Team.Red:
-                    loadout = "Red";
-                    break;
-                case Team.Blue:
-                    loadout = "Blue";
-                    break;
+                return loadout;
             }
 
-            if (string.IsNullOrWhiteSpace(loadout)) return null;
-
-            return _pluginAccessor.Instance.Loadouts.FirstOrDefault(x =>
-                string.Equals(x.Title, loadout, StringComparison.OrdinalIgnoreCase));
+            return await _loadoutManager.GetRandomLoadout(category, player, _permissionChecker);
         }
 
-        public void GiveLoadout(IGamePlayer player)
+        public async Task GiveLoadout(IGamePlayer player)
         {
-            var loadout = GetLoadout(player);
+            var loadout = await GetLoadout(player);
 
             if (loadout == null)
             {
@@ -103,13 +111,13 @@ namespace TeamDeathmatch.Matches
             }
         }
 
-        public void SpawnPlayer(IGamePlayer player, PlayerSpawn spawn)
+        public async Task SpawnPlayer(IGamePlayer player, PlayerSpawn spawn)
         {
             spawn.SpawnPlayer(player);
 
             player.Heal();
 
-            GiveLoadout(player);
+            await GiveLoadout(player);
 
             _graceManager.GrantGracePeriod(player, Configuration.GetValue<float>("GracePeriod", 2));
         }
@@ -144,7 +152,7 @@ namespace TeamDeathmatch.Matches
 
             await PreservationManager.PreservePlayer(player);
 
-            SpawnPlayer(player, spawn);
+            await SpawnPlayer(player, spawn);
         }
 
         public override async UniTask AddPlayers(IEnumerable<IGamePlayer> players)
@@ -220,7 +228,7 @@ namespace TeamDeathmatch.Matches
                     blueSpawnIndex %= blueSpawns.Count;
                 }
 
-                SpawnPlayer(player, spawn);
+                await SpawnPlayer(player, spawn);
             }
 
             _tokenSource = new CancellationTokenSource();
@@ -343,7 +351,7 @@ namespace TeamDeathmatch.Matches
 
             var spawn = spawns.RandomElement();
 
-            SpawnPlayer(player, spawn);
+            AsyncHelper.RunSync(() => SpawnPlayer(player, spawn));
         }
 
         public Task HandleEventAsync(object sender, UnturnedPlayerDamagingEvent @event)
