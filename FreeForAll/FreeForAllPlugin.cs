@@ -9,6 +9,7 @@ using OpenMod.API.Plugins;
 using OpenMod.Unturned.Plugins;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 [assembly: PluginMetadata("FreeForAll", DisplayName = "Free For All")]
@@ -47,9 +48,9 @@ namespace FreeForAll
                 new LoadoutCategory("FreeForAll", new List<string> {"Free For All", "FFA"}, this, _dataStore);
             await category.LoadLoadouts();
 
-            foreach (var loadout in category.GetLoadouts())
+            foreach (var loadout in category.GetLoadouts().OfType<Loadout>())
             {
-                _permissionRegistry.RegisterPermission(this, loadout.Permission);
+                _permissionRegistry.RegisterPermission(this, loadout.GetPermissionWithoutComponent());
             }
 
             _loadoutManager.AddCategory(category);

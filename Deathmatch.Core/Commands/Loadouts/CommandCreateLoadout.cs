@@ -60,17 +60,15 @@ namespace Deathmatch.Core.Commands.Loadouts
             var newLoadout = Loadout.FromPlayer(player);
 
             newLoadout.Title = loadoutTitle;
-            newLoadout.Permission = "loadouts." + loadoutTitle;
+            newLoadout.Permission = category.Component.OpenModComponentId + ":loadouts." + loadoutTitle;
 
             if (oldLoadout != null)
             {
                 category.RemoveLoadout(oldLoadout);
             }
-            else
-            {
-                _permissionRegistry.RegisterPermission(category.Component, newLoadout.Permission);
-            }
-            
+
+            _permissionRegistry.RegisterPermission(category.Component, newLoadout.GetPermissionWithoutComponent());
+
             category.AddLoadout(newLoadout);
 
             await category.SaveLoadouts();
