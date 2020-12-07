@@ -110,18 +110,15 @@ namespace Deathmatch.Core.Items
 
             if (GetAsset() == null) return false;
 
-            for (int i = 0; i < Amount; i++)
-            {
-                var item = new SDG.Unturned.Item(
-                    GetAsset().id,
-                    GetAsset().amount,
-                    100,
-                    State == null
-                        ? GetAsset().getState(EItemOrigin.ADMIN)
-                        : State.Split(new[] {','}, StringSplitOptions.RemoveEmptyEntries).Select(byte.Parse).ToArray());
+            var item = new SDG.Unturned.Item(
+                GetAsset().id,
+                Amount,
+                Quality,
+                State == null
+                    ? GetAsset().getState(EItemOrigin.ADMIN)
+                    : State.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries).Select(byte.Parse).ToArray());
 
-                player.Inventory.forceAddItem(item, true);
-            }
+            player.Inventory.forceAddItem(item, true);
 
             return true;
         }
