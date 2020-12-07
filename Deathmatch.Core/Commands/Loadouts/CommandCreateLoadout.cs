@@ -1,6 +1,7 @@
 ﻿using Cysharp.Threading.Tasks;
 using Deathmatch.API.Loadouts;
 using Deathmatch.API.Players;
+using Deathmatch.Core.Loadouts;
 using Microsoft.Extensions.Localization;
 using OpenMod.API.Commands;
 using OpenMod.API.Permissions;
@@ -9,7 +10,6 @@ using OpenMod.Core.Commands;
 using OpenMod.Unturned.Commands;
 using OpenMod.Unturned.Users;
 using System;
-using Deathmatch.Core.Loadouts;
 
 namespace Deathmatch.Core.Commands.Loadouts
 {
@@ -29,15 +29,18 @@ namespace Deathmatch.Core.Commands.Loadouts
         private readonly IGamePlayerManager _playerManager;
         private readonly ILoadoutManager _loadoutManager;
         private readonly IStringLocalizer _stringLocalizer;
+        private readonly IPermissionRegistry _permissionRegistry;
 
         public CommandCreateLoadout(IGamePlayerManager playerManager,
             ILoadoutManager loadoutManager,
             IStringLocalizer stringLocalizer,
+            IPermissionRegistry permissionRegistry,
             IServiceProvider serviceProvider) : base(serviceProvider)
         {
             _playerManager = playerManager;
             _loadoutManager = loadoutManager;
             _stringLocalizer = stringLocalizer;
+            _permissionRegistry = permissionRegistry;
         }
 
         protected override async UniTask OnExecuteAsync()
@@ -60,7 +63,11 @@ namespace Deathmatch.Core.Commands.Loadouts
             {
                 category.RemoveLoadout(oldLoadout);
             }
-
+            else
+            {
+                _permissionRegistry.RegisterPermission(category.Component, "loadouts." + newLoadout.Title);
+            }
+            
             category.AddLoadout(newLoadout);
 
             await category.SaveLoadouts();

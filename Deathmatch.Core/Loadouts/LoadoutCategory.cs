@@ -16,7 +16,7 @@ namespace Deathmatch.Core.Loadouts
 
         public IOpenModComponent Component { get; }
 
-        private readonly List<ILoadout> _loadouts;
+        private List<ILoadout> _loadouts;
         private readonly IDataStore _dataStore;
 
         public LoadoutCategory(string title, IReadOnlyCollection<string> aliases, IOpenModComponent component, IDataStore dataStore, List<ILoadout> loadouts = null)
@@ -34,6 +34,16 @@ namespace Deathmatch.Core.Loadouts
             _loadouts.FirstOrDefault(x => x.Title.Equals(title, StringComparison.OrdinalIgnoreCase));
 
         public IReadOnlyCollection<ILoadout> GetLoadouts() => _loadouts.AsReadOnly();
+
+        public async Task LoadLoadouts()
+        {
+            _loadouts = new List<ILoadout>();
+
+            if (await _dataStore.ExistsAsync(Title))
+            {
+                _loadouts.AddRange(await _dataStore.LoadAsync<List<Loadout>>(Title) ?? new List<Loadout>());
+            }
+        }
 
         public Task SaveLoadouts() => _dataStore.SaveAsync(Title, _loadouts.OfType<Loadout>().ToList());
 
