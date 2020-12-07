@@ -13,7 +13,6 @@ using System;
 namespace Deathmatch.Core.Commands.Loadouts
 {
     [Command("loadout", Priority = Priority.Normal)]
-    [CommandAlias("l")]
     [CommandSyntax("<game mode> <loadout>")]
     [CommandDescription("Select your loadout for the given game mode.")]
     [CommandActor(typeof(UnturnedUser))]

@@ -14,7 +14,6 @@ using System.Threading.Tasks;
 namespace Deathmatch.Core.Commands.Loadouts
 {
     [Command("loadouts", Priority = Priority.Normal)]
-    [CommandAlias("ls")]
     [CommandSyntax("[game mode]")]
     [CommandDescription("View which loadouts you have unlocked.")]
     [CommandActor(typeof(UnturnedUser))]
