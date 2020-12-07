@@ -51,6 +51,8 @@ namespace Deathmatch.Core.Commands.Loadouts
             if (loadout == null)
                 throw new UserFriendlyException(_stringLocalizer["commands:loadout:no_loadout"]);
 
+            await UniTask.SwitchToMainThread();
+
             loadout.GiveToPlayer(player);
 
             await PrintAsync(_stringLocalizer["commands:give_loadout:success",
