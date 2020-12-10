@@ -92,6 +92,14 @@ namespace Deathmatch.Core.Loadouts
 
                 loaded.AddRange(selections.OfType<Dictionary<object, object>>()
                     .Select(selection => selection.ToObject<LoadoutSelection>()).Where(parsed => parsed != null));
+
+                _logger.LogInformation("Loaded selections: " + selections.Count);
+                _logger.LogInformation("Parsed selections: " + loaded.Count);
+
+                foreach (var dictionary in selections.OfType<Dictionary<object, object>>())
+                {
+                    _logger.LogInformation("Dictionary info:" + string.Join("\n", dictionary.Select(x => x.Key + " - " + x.Value)));
+                }
             }
 
             if (!_loadoutSelections.ContainsKey(player))
