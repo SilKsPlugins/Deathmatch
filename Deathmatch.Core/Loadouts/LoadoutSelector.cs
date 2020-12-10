@@ -12,6 +12,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace Deathmatch.Core.Loadouts
 {
@@ -20,19 +21,22 @@ namespace Deathmatch.Core.Loadouts
     {
         private readonly ILoadoutManager _loadoutManager;
         private readonly IUserDataStore _userDataStore;
+        private readonly ILogger<LoadoutSelector> _logger;
 
-        private readonly Dictionary<IGamePlayer, LoadoutSelections> _loadoutSelections;
+        private readonly Dictionary<IGamePlayer, List<LoadoutSelection>> _loadoutSelections;
 
         public LoadoutSelector(ILoadoutManager loadoutManager,
             IUserDataStore userDataStore,
             IGamePlayerManager playerManager,
             IEventBus eventBus,
-            IRuntime runtime)
+            IRuntime runtime,
+            ILogger<LoadoutSelector> logger)
         {
             _loadoutManager = loadoutManager;
             _userDataStore = userDataStore;
+            _logger = logger;
 
-            _loadoutSelections = new Dictionary<IGamePlayer, LoadoutSelections>();
+            _loadoutSelections = new Dictionary<IGamePlayer, List<LoadoutSelection>>();
 
             AsyncHelper.RunSync(async () =>
             {
@@ -52,7 +56,7 @@ namespace Deathmatch.Core.Loadouts
 
             if (loadoutCategory == null) return null;
 
-            var loadoutTitle = _loadoutSelections[player].Selections
+            var loadoutTitle = _loadoutSelections[player]
                 .FirstOrDefault(x => x.GameMode.Equals(category, StringComparison.OrdinalIgnoreCase))?.Loadout;
 
             return loadoutTitle == null ? null : loadoutCategory.GetLoadout(loadoutTitle);
@@ -63,8 +67,7 @@ namespace Deathmatch.Core.Loadouts
             var selections = _loadoutSelections[player];
 
             var selection =
-                selections.Selections.FirstOrDefault(x =>
-                    x.GameMode.Equals(category, StringComparison.OrdinalIgnoreCase));
+                selections.FirstOrDefault(x => x.GameMode.Equals(category, StringComparison.OrdinalIgnoreCase));
 
             if (selection == null)
             {
@@ -74,7 +77,7 @@ namespace Deathmatch.Core.Loadouts
                     Loadout = loadout
                 };
 
-                selections.Selections.Add(selection);
+                selections.Add(selection);
             }
             else
             {
@@ -90,10 +93,21 @@ namespace Deathmatch.Core.Loadouts
         private async Task LoadPlayer(IGamePlayer player)
         {
             var selections =
-                await _userDataStore.GetUserDataAsync<LoadoutSelections>(player.User.Id, player.User.Type,
+                await _userDataStore.GetUserDataAsync<List<object>>(player.User.Id, player.User.Type,
                     LoadoutSelectionsKey);
-            
-            _loadoutSelections.Add(player, selections ?? new LoadoutSelections());
+
+            if (selections != null)
+            {
+                foreach (var selection in selections)
+                {
+                    var type = selection.GetType();
+
+                    _logger.LogDebug(type.Name + ": " + selection);
+                }
+            }
+
+            _loadoutSelections.Add(player,
+                selections?.OfType<LoadoutSelection>().ToList() ?? new List<LoadoutSelection>());
         }
 
         private async Task SavePlayer(IGamePlayer player)
