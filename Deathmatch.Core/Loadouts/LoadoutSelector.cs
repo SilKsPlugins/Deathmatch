@@ -1,7 +1,7 @@
 ﻿using Deathmatch.API.Loadouts;
 using Deathmatch.API.Players;
-using Deathmatch.API.Players.Events;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using OpenMod.API;
 using OpenMod.API.Eventing;
 using OpenMod.API.Ioc;
@@ -12,7 +12,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
 
 namespace Deathmatch.Core.Loadouts
 {
@@ -37,17 +36,6 @@ namespace Deathmatch.Core.Loadouts
             _logger = logger;
 
             _loadoutSelections = new Dictionary<IGamePlayer, List<LoadoutSelection>>();
-
-            AsyncHelper.RunSync(async () =>
-            {
-                foreach (var player in playerManager.GetPlayers())
-                {
-                    await LoadPlayer(player);
-                }
-            });
-
-            eventBus.Subscribe(runtime, (EventCallback<IGamePlayerConnectedEvent>)OnGamePlayerConnected);
-            eventBus.Subscribe(runtime, (EventCallback<IGamePlayerDisconnectedEvent>)OnGamePlayerDisconnected);
         }
 
         public ILoadout GetLoadout(IGamePlayer player, string category)
@@ -90,7 +78,7 @@ namespace Deathmatch.Core.Loadouts
 
         private const string LoadoutSelectionsKey = "LoadoutSelections";
 
-        private async Task LoadPlayer(IGamePlayer player)
+        internal async Task LoadPlayer(IGamePlayer player)
         {
             var selections =
                 await _userDataStore.GetUserDataAsync<List<object>>(player.User.Id, player.User.Type,
@@ -106,22 +94,27 @@ namespace Deathmatch.Core.Loadouts
                 }
             }
 
-            _loadoutSelections.Add(player,
-                selections?.OfType<LoadoutSelection>().ToList() ?? new List<LoadoutSelection>());
+            var loaded = selections?.OfType<LoadoutSelection>().ToList() ?? new List<LoadoutSelection>();
+
+            if (!_loadoutSelections.ContainsKey(player))
+            {
+                _loadoutSelections.Add(player, loaded);
+            }
+            else
+            {
+                _loadoutSelections[player] = loaded;
+            }
         }
 
-        private async Task SavePlayer(IGamePlayer player)
+        internal async Task SavePlayer(IGamePlayer player)
         {
-            await _userDataStore.SetUserDataAsync(player.User.Id, player.User.Type, LoadoutSelectionsKey,
-                _loadoutSelections[player]);
+            if (_loadoutSelections.ContainsKey(player))
+            {
+                await _userDataStore.SetUserDataAsync(player.User.Id, player.User.Type, LoadoutSelectionsKey,
+                    _loadoutSelections[player]);
 
-            _loadoutSelections.Remove(player);
+                _loadoutSelections.Remove(player);
+            }
         }
-
-        private Task OnGamePlayerConnected(IServiceProvider serviceProvider, object sender,
-            IGamePlayerConnectedEvent @event) => LoadPlayer(@event.Player);
-
-        private Task OnGamePlayerDisconnected(IServiceProvider serviceProvider, object sender,
-            IGamePlayerDisconnectedEvent @event) => SavePlayer(@event.Player);
     }
 }
