@@ -10,7 +10,6 @@ using OpenMod.Core.Helpers;
 using OpenMod.Core.Users;
 using OpenMod.Unturned.Players;
 using OpenMod.Unturned.Users;
-using OpenMod.Unturned.Users.Events;
 using SDG.Unturned;
 using Steamworks;
 using System;
@@ -36,9 +35,6 @@ namespace Deathmatch.Core.Players
             _runtime = runtime;
             _players = new List<IGamePlayer>();
 
-            eventBus.Subscribe(runtime, (EventCallback<UnturnedUserConnectedEvent>)OnUserConnected);
-            eventBus.Subscribe(runtime, (EventCallback<UnturnedUserDisconnectedEvent>)OnUserDisconnected);
-
             AsyncHelper.RunSync(async () =>
             {
                 var existingPlayers = await userManager.GetUsersAsync(KnownActorTypes.Player);
@@ -54,11 +50,11 @@ namespace Deathmatch.Core.Players
             });
         }
 
-        private async Task OnUserConnected(IServiceProvider serviceProvider, object sender, UnturnedUserConnectedEvent @event)
+        internal async Task AddUser(UnturnedUser user)
         {
-            if (_players.All(x => x.SteamId != @event.User.SteamId))
+            if (_players.All(x => x.SteamId != user.SteamId))
             {
-                var player = new GamePlayer(@event.User);
+                var player = new GamePlayer(user);
 
                 _players.Add(player);
 
@@ -66,14 +62,14 @@ namespace Deathmatch.Core.Players
             }
         }
 
-        private async Task OnUserDisconnected(IServiceProvider serviceProvider, object sender, UnturnedUserDisconnectedEvent @event)
+        internal async Task RemoveUser(UnturnedUser user)
         {
-            var player = GetPlayer(@event.User);
+            var player = GetPlayer(user);
 
             if (player != null)
             {
                 await _eventBus.EmitAsync(_runtime, this, new GamePlayerDisconnectedEvent(player));
-                _players.RemoveAll(x => x.SteamId == @event.User.SteamId);
+                _players.RemoveAll(x => x.SteamId == user.SteamId);
             }
         }
 
