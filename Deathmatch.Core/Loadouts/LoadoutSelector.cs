@@ -45,23 +45,27 @@ namespace Deathmatch.Core.Loadouts
             if (loadoutCategory == null) return null;
 
             var loadoutTitle = _loadoutSelections[player]
-                .FirstOrDefault(x => x.GameMode.Equals(category, StringComparison.OrdinalIgnoreCase))?.Loadout;
+                .FirstOrDefault(x => x.GameMode.Equals(loadoutCategory.Title, StringComparison.OrdinalIgnoreCase))?.Loadout;
 
             return loadoutTitle == null ? null : loadoutCategory.GetLoadout(loadoutTitle);
         }
 
         public async Task SetLoadout(IGamePlayer player, string category, string loadout)
         {
+            var loadoutCategory = _loadoutManager.GetCategory(category);
+
+            if (loadoutCategory == null) return;
+
             var selections = _loadoutSelections[player];
 
             var selection =
-                selections.FirstOrDefault(x => x.GameMode.Equals(category, StringComparison.OrdinalIgnoreCase));
+                selections.FirstOrDefault(x => x.GameMode.Equals(loadoutCategory.Title, StringComparison.OrdinalIgnoreCase));
 
             if (selection == null)
             {
                 selection = new LoadoutSelection()
                 {
-                    GameMode = category,
+                    GameMode = loadoutCategory.Title,
                     Loadout = loadout
                 };
 

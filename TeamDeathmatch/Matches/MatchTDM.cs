@@ -83,7 +83,7 @@ namespace TeamDeathmatch.Matches
 
         public async Task<ILoadout> GetLoadout(IGamePlayer player)
         {
-            const string category = "TeamDeathmatch";
+            const string category = "Team Deathmatch";
 
             var loadout = _loadoutSelector.GetLoadout(player, category);
             

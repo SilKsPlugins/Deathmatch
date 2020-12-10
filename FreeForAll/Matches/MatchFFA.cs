@@ -97,7 +97,7 @@ namespace FreeForAll.Matches
 
         public async Task<ILoadout> GetLoadout(IGamePlayer player)
         {
-            const string category = "TeamDeathmatch";
+            const string category = "Free For All";
 
             var loadout = _loadoutSelector.GetLoadout(player, category);
 
