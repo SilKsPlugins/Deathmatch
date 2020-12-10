@@ -84,17 +84,15 @@ namespace Deathmatch.Core.Loadouts
                 await _userDataStore.GetUserDataAsync<List<object>>(player.User.Id, player.User.Type,
                     LoadoutSelectionsKey);
 
+            var loaded = new List<LoadoutSelection>();
+
             if (selections != null)
             {
-                foreach (var selection in selections)
-                {
-                    var type = selection.GetType();
+                loaded.AddRange(selections.OfType<LoadoutSelection>());
 
-                    _logger.LogDebug(type.Name + ": " + selection);
-                }
+                loaded.AddRange(selections.OfType<Dictionary<object, object>>()
+                    .Select(selection => selection.ToObject<LoadoutSelection>()).Where(parsed => parsed != null));
             }
-
-            var loaded = selections?.OfType<LoadoutSelection>().ToList() ?? new List<LoadoutSelection>();
 
             if (!_loadoutSelections.ContainsKey(player))
             {
