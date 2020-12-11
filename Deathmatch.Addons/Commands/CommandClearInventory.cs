@@ -22,7 +22,7 @@ namespace Deathmatch.Addons.Commands
             _playerManager = playerManager;
         }
 
-        protected override UniTask OnExecuteAsync()
+        protected override async UniTask OnExecuteAsync()
         {
             var player = _playerManager.GetPlayer((UnturnedUser) Context.Actor);
 
@@ -30,8 +30,6 @@ namespace Deathmatch.Addons.Commands
 
             player.ClearInventory();
             player.ClearClothing();
-
-            return UniTask.CompletedTask;
         }
     }
 }
