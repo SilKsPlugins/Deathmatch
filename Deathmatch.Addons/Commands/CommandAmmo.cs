@@ -29,6 +29,8 @@ namespace Deathmatch.Addons.Commands
                 amount = await Context.Parameters.GetAsync<byte>(0);
             }
 
+            await UniTask.SwitchToMainThread();
+
             var itemId = user.Player.Player.equipment.itemID;
 
             if (itemId == 0)
