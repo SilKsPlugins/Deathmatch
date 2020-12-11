@@ -26,6 +26,8 @@ namespace Deathmatch.Addons.Commands
         {
             var player = _playerManager.GetPlayer((UnturnedUser) Context.Actor);
 
+            await UniTask.SwitchToMainThread();
+
             player.ClearInventory();
             player.ClearClothing();
 
