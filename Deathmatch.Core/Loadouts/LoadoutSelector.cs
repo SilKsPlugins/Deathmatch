@@ -84,9 +84,16 @@ namespace Deathmatch.Core.Loadouts
 
         internal async Task LoadPlayer(IGamePlayer player)
         {
-            var selections =
-                await _userDataStore.GetUserDataAsync<List<object>>(player.User.Id, player.User.Type,
+            var userData =
+                await _userDataStore.GetUserDataAsync<object>(player.User.Id, player.User.Type,
                     LoadoutSelectionsKey);
+
+            List<object> selections = null;
+
+            if (userData is List<object> objects)
+                selections = objects;
+            else if (userData is List<LoadoutSelection> other)
+                selections = other.Cast<object>().ToList();
 
             var loaded = new List<LoadoutSelection>();
 
