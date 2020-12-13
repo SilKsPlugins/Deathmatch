@@ -75,7 +75,7 @@ namespace Deathmatch.Core.Commands.Loadouts
 
             await PrintAsync(_stringLocalizer[
                 "commands:create_loadout:success" + (oldLoadout == null ? "" : "_overwrite"),
-                new {Loadout = newLoadout.Title, GameMode = category.Title}]);
+                new { Loadout = newLoadout.Title, GameMode = category.Title }]);
         }
     }
 }

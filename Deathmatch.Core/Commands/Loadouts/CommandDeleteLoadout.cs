@@ -47,7 +47,7 @@ namespace Deathmatch.Core.Commands.Loadouts
             await category.SaveLoadouts();
 
             await PrintAsync(_stringLocalizer["commands:delete_loadout:success",
-                new {GameMode = category.Title, Loadout = loadout.Title}]);
+                new { GameMode = category.Title, Loadout = loadout.Title }]);
         }
     }
 }

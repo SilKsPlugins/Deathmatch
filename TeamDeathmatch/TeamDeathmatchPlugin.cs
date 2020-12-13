@@ -47,7 +47,7 @@ namespace TeamDeathmatch
         {
             await ReloadSpawns();
 
-            var category = new LoadoutCategory("Team Deathmatch", new List<string> {"TeamDeathmatch", "TDM"}, this,
+            var category = new LoadoutCategory("Team Deathmatch", new List<string> { "TeamDeathmatch", "TDM" }, this,
                 _dataStore);
             await category.LoadLoadouts();
 

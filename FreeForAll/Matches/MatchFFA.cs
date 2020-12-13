@@ -1,4 +1,5 @@
 ﻿using Cysharp.Threading.Tasks;
+using Deathmatch.API.Loadouts;
 using Deathmatch.API.Matches;
 using Deathmatch.API.Players;
 using Deathmatch.Core.Grace;
@@ -11,7 +12,9 @@ using FreeForAll.Players;
 using HarmonyLib;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using OpenMod.API.Permissions;
 using OpenMod.API.Plugins;
+using OpenMod.Core.Helpers;
 using OpenMod.Core.Users;
 using OpenMod.Unturned.Players.Life.Events;
 using SDG.Unturned;
@@ -20,9 +23,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Deathmatch.API.Loadouts;
-using OpenMod.API.Permissions;
-using OpenMod.Core.Helpers;
 using UnityEngine;
 using Color = System.Drawing.Color;
 

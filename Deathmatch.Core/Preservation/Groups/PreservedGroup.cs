@@ -17,7 +17,7 @@ namespace Deathmatch.Core.Preservation.Groups
         {
             _groupId = quests.groupID;
             _groupRank = quests.groupRank;
-            _inMainGroup = (bool) InMainGroup.GetValue(quests);
+            _inMainGroup = (bool)InMainGroup.GetValue(quests);
 
             quests.channel.send("tellSetGroup", ESteamCall.ALL, ESteamPacket.UPDATE_RELIABLE_BUFFER, new object[]
             {

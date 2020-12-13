@@ -86,7 +86,7 @@ namespace TeamDeathmatch.Matches
             const string category = "Team Deathmatch";
 
             var loadout = _loadoutSelector.GetLoadout(player, category);
-            
+
             if (loadout != null && await _permissionChecker.CheckPermissionAsync(player.User, loadout.Permission) ==
                 PermissionGrantResult.Grant)
             {

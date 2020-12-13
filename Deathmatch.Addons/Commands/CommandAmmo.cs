@@ -22,7 +22,7 @@ namespace Deathmatch.Addons.Commands
         {
             byte amount = 1;
 
-            var user = (UnturnedUser) Context.Actor;
+            var user = (UnturnedUser)Context.Actor;
 
             if (Context.Parameters.Count > 0)
             {

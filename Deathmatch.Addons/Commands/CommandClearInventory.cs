@@ -24,7 +24,7 @@ namespace Deathmatch.Addons.Commands
 
         protected override async UniTask OnExecuteAsync()
         {
-            var player = _playerManager.GetPlayer((UnturnedUser) Context.Actor);
+            var player = _playerManager.GetPlayer((UnturnedUser)Context.Actor);
 
             await UniTask.SwitchToMainThread();
 

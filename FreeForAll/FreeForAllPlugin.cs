@@ -45,7 +45,7 @@ namespace FreeForAll
             await ReloadSpawns();
 
             var category =
-                new LoadoutCategory("Free For All", new List<string> {"FreeForAll", "FFA"}, this, _dataStore);
+                new LoadoutCategory("Free For All", new List<string> { "FreeForAll", "FFA" }, this, _dataStore);
             await category.LoadLoadouts();
 
             foreach (var loadout in category.GetLoadouts().OfType<Loadout>())

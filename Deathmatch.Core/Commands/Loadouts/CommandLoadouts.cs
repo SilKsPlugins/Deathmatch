@@ -71,7 +71,7 @@ namespace Deathmatch.Core.Commands.Loadouts
                     hasLoadouts = true;
 
                     await PrintAsync(_stringLocalizer["commands:loadouts:success",
-                        new {GameMode = category.Title, Loadouts = loadouts}]);
+                        new { GameMode = category.Title, Loadouts = loadouts }]);
                 }
 
                 if (!hasLoadouts)
@@ -94,12 +94,12 @@ namespace Deathmatch.Core.Commands.Loadouts
                     if (loadouts.Count == 0)
                     {
                         await PrintAsync(_stringLocalizer["commands:loadouts:none_gamemode",
-                            new {GameMode = category.Title}]);
+                            new { GameMode = category.Title }]);
                     }
                     else
                     {
                         await PrintAsync(_stringLocalizer["commands:loadouts:success",
-                            new {GameMode = category.Title, Loadouts = loadouts}]);
+                            new { GameMode = category.Title, Loadouts = loadouts }]);
                     }
                 }
             }

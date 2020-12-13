@@ -40,7 +40,7 @@ namespace Deathmatch.Core.Commands.Loadouts
 
         protected override async UniTask OnExecuteAsync()
         {
-            var player = _playerManager.GetPlayer((UnturnedUser) Context.Actor);
+            var player = _playerManager.GetPlayer((UnturnedUser)Context.Actor);
 
             var gameMode = await Context.Parameters.GetAsync<string>(0);
             var loadoutTitle = await Context.Parameters.GetAsync<string>(1);
@@ -60,7 +60,7 @@ namespace Deathmatch.Core.Commands.Loadouts
 
             await _loadoutSelector.SetLoadout(player, category.Title, loadout.Title);
 
-            await PrintAsync(_stringLocalizer["commands:loadout:success", new {GameMode = category.Title, Loadout = loadout.Title}]);
+            await PrintAsync(_stringLocalizer["commands:loadout:success", new { GameMode = category.Title, Loadout = loadout.Title }]);
         }
     }
 }

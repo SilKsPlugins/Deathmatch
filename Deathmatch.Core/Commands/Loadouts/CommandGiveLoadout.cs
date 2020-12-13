@@ -56,7 +56,7 @@ namespace Deathmatch.Core.Commands.Loadouts
             loadout.GiveToPlayer(player);
 
             await PrintAsync(_stringLocalizer["commands:give_loadout:success",
-                new {GameMode = category.Title, Loadout = loadout.Title}]);
+                new { GameMode = category.Title, Loadout = loadout.Title }]);
         }
     }
 }
