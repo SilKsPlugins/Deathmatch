@@ -27,13 +27,7 @@ namespace Deathmatch.Core.Commands
 
         protected override async UniTask OnExecuteAsync()
         {
-            var user = (UnturnedUser)Context.Actor;
-
-            if (user == null) return;
-
-            var player = _playerManager.GetPlayer(x => x.SteamId == user.SteamId);
-
-            if (player == null) return;
+            var player = _playerManager.GetPlayer((UnturnedUser)Context.Actor);
 
             await _matchExecutor.AddParticipant(player);
         }
