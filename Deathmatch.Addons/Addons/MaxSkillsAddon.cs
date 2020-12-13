@@ -1,11 +1,13 @@
 ﻿using Deathmatch.API.Players;
+using Deathmatch.API.Players.Events;
 using OpenMod.Unturned.Players.Life.Events;
 using System.Threading.Tasks;
 
 namespace Deathmatch.Addons.Addons
 {
     public class MaxSkillsAddon : IAddon,
-        IAddonEventListener<UnturnedPlayerRevivedEvent>
+        IAddonEventListener<UnturnedPlayerRevivedEvent>,
+        IAddonEventListener<IGamePlayerJoinedMatchEvent>
     {
         private readonly IGamePlayerManager _playerManager;
 
@@ -39,6 +41,13 @@ namespace Deathmatch.Addons.Addons
             {
                 player.MaxSkills();
             }
+
+            return Task.CompletedTask;
+        }
+
+        public Task HandleEventAsync(object sender, IGamePlayerJoinedMatchEvent @event)
+        {
+            @event.Player.MaxSkills();
 
             return Task.CompletedTask;
         }
