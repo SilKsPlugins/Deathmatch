@@ -29,11 +29,11 @@ namespace Deathmatch.Core.Commands
 
         protected override async UniTask OnExecuteAsync()
         {
-            string title = await Context.Parameters.GetAsync<string>(0, null);
+            var title = await Context.Parameters.GetAsync<string>(0, null);
 
-            IMatchRegistration registration = string.IsNullOrWhiteSpace(title)
+            var registration = string.IsNullOrWhiteSpace(title)
                 ? _matchManager.GetMatchRegistrations().RandomElement()
-                : _matchManager.GetMatchRegistration(title);
+                : _matchManager.GetMatchRegistration(title!);
 
             if (registration == null)
             {
@@ -44,7 +44,7 @@ namespace Deathmatch.Core.Commands
             if (await _matchExecutor.StartMatch(registration))
             {
                 await PrintAsync(_stringLocalizer["commands:dmstart:success",
-                    new { Title = registration.Title }]);
+                    new { registration.Title }]);
             }
             else
             {

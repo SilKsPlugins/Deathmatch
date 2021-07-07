@@ -1,9 +1,8 @@
 ﻿using Deathmatch.API.Matches;
 using Microsoft.Extensions.Logging;
-using OpenMod.Core.Helpers;
+using OpenMod.Common.Helpers;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
 
 namespace Deathmatch.Core.Matches
@@ -16,9 +15,12 @@ namespace Deathmatch.Core.Matches
         {
             _matchRegistrations = new List<IMatchRegistration>();
 
-            foreach (var type in assembly.FindAllTypes().Where(typeof(IMatch).IsAssignableFrom))
+            foreach (var type in assembly.FindTypes<IMatch>())
             {
-                if (type == null) continue;
+                if (type == null)
+                {
+                    continue;
+                }
 
                 try
                 {

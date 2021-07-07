@@ -2,8 +2,8 @@
 {
     public class LoadoutSelection
     {
-        public string GameMode { get; set; }
+        public string GameMode { get; set; } = "";
 
-        public string Loadout { get; set; }
+        public string Loadout { get; set; } = "";
     }
 }

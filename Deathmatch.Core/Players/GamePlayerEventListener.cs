@@ -14,7 +14,7 @@ namespace Deathmatch.Core.Players
             _playerManager = playerManager;
         }
 
-        public async Task HandleEventAsync(object sender, UnturnedUserConnectedEvent @event)
+        public async Task HandleEventAsync(object? sender, UnturnedUserConnectedEvent @event)
         {
             if (_playerManager is GamePlayerManager manager)
             {
@@ -22,7 +22,7 @@ namespace Deathmatch.Core.Players
             }
         }
 
-        public async Task HandleEventAsync(object sender, UnturnedUserDisconnectedEvent @event)
+        public async Task HandleEventAsync(object? sender, UnturnedUserDisconnectedEvent @event)
         {
             if (_playerManager is GamePlayerManager manager)
             {

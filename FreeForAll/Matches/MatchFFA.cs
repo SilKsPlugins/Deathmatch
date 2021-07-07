@@ -18,6 +18,7 @@ using OpenMod.Core.Helpers;
 using OpenMod.Core.Users;
 using OpenMod.Unturned.Players.Life.Events;
 using SDG.Unturned;
+using SilK.Unturned.Extras.Plugins;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -57,45 +58,45 @@ namespace FreeForAll.Matches
             _loadoutSelector = loadoutSelector;
             _permissionChecker = permissionChecker;
             _graceManager = graceManager;
+
+            _tokenSource = new CancellationTokenSource();
         }
 
-        public IReadOnlyCollection<PlayerSpawn> GetSpawns() => _pluginAccessor.Instance.Spawns;
+        public IReadOnlyCollection<PlayerSpawn> GetSpawns() => _pluginAccessor.Instance?.Spawns ??
+                                                               throw new PluginNotLoadedException(
+                                                                   typeof(FreeForAllPlugin));
 
         public PlayerSpawn GetFurthestSpawn()
         {
-            var enemyPoints = GetPlayers().Where(x => !x.IsDead).Select(x => x.Transform.position);
+            var enemyPoints = GetPlayers().Where(x => !x.IsDead).Select(x => x.Transform.position).ToList();
 
-            float TotalMagnitude(Vector3 point, IEnumerable<Vector3> others)
+            static float TotalMagnitude(Vector3 point, IEnumerable<Vector3> others)
             {
-                float total = 0;
-
-                foreach (var other in others)
-                {
-                    total += (other - point).sqrMagnitude;
-                }
-
-                return total;
+                return others.Sum(other => (other - point).sqrMagnitude);
             }
 
             var spawns = GetSpawns().ToList().Shuffle();
 
-            PlayerSpawn best = null;
-            float bestDist = 0;
+            PlayerSpawn? best = null;
+            var bestDist = 0f;
 
             foreach (var spawn in spawns)
             {
                 var dist = TotalMagnitude(spawn.ToVector3(), enemyPoints);
 
-                if (dist < bestDist) continue;
+                if (dist < bestDist)
+                {
+                    continue;
+                }
 
                 best = spawn;
                 bestDist = dist;
             }
 
-            return best;
+            return best ?? throw new Exception("No spawns configured. Cannot spawn player.");
         }
 
-        public async Task<ILoadout> GetLoadout(IGamePlayer player)
+        public async Task<ILoadout?> GetLoadout(IGamePlayer player)
         {
             const string category = "Free For All";
 
@@ -252,8 +253,8 @@ namespace FreeForAll.Matches
                 }
             }
 
-            IGamePlayer winner = null;
-            int maxKills = 0;
+            IGamePlayer? winner = null;
+            var maxKills = 0;
 
             foreach (var player in Players)
             {
@@ -316,9 +317,17 @@ namespace FreeForAll.Matches
 
         private void Events_OnReviving(Player nativePlayer, ref bool cancel)
         {
-            if (!IsRunning) return;
+            if (!IsRunning)
+            {
+                return;
+            }
 
             var player = GetPlayer(nativePlayer);
+
+            if (player == null)
+            {
+                return;
+            }
 
             cancel = true;
 
@@ -331,13 +340,17 @@ namespace FreeForAll.Matches
         {
             var victim = GetPlayer(@event.Player);
 
-            if (victim == null) return;
+            if (victim == null)
+            {
+                return;
+            }
 
             var killer = GetPlayer(@event.Instigator);
 
-            if (killer == null) return;
-
-            if (killer == victim) return;
+            if (killer == null || killer == victim)
+            {
+                return;
+            }
 
             var kills = killer.GetKills() + 1;
 
@@ -346,11 +359,13 @@ namespace FreeForAll.Matches
             var threshold = Configuration.GetValue("KillThreshold", 30);
 
             if (kills >= threshold)
+            {
                 await MatchExecutor.EndMatch();
+            }
         }
 
         private delegate void Reviving(Player player, ref bool cancel);
-        private static event Reviving OnReviving;
+        private static event Reviving? OnReviving;
 
         // ReSharper disable InconsistentNaming, UnusedType.Local, UnusedMember.Local
         [HarmonyPatch]
@@ -360,7 +375,7 @@ namespace FreeForAll.Matches
             [HarmonyPrefix]
             private static bool PreAskRespawn(PlayerLife __instance)
             {
-                bool cancel = false;
+                var cancel = false;
 
                 OnReviving?.Invoke(__instance.player, ref cancel);
 

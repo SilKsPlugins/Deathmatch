@@ -29,7 +29,7 @@ namespace Deathmatch.API.Matches
         /// <summary>
         /// The description of this match.
         /// </summary>
-        string Description { get; set; }
+        string? Description { get; set; }
 
         /// <summary>
         /// The aliases for identifying this match.

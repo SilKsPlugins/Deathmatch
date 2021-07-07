@@ -61,7 +61,7 @@ namespace Deathmatch.Core.Players
 
         internal async Task RemoveUser(UnturnedUser user)
         {
-            var player = this.GetPlayer(user);
+            var player = _players.FirstOrDefault(x => x.SteamId != user.SteamId);
 
             if (player != null)
             {
@@ -80,14 +80,14 @@ namespace Deathmatch.Core.Players
             return _players.Where(predicate.Invoke).ToList().AsReadOnly();
         }
 
-        public IGamePlayer GetPlayer(Predicate<IGamePlayer> predicate)
+        public IGamePlayer? GetPlayer(Predicate<IGamePlayer> predicate)
         {
             return _players.FirstOrDefault(predicate.Invoke);
         }
 
-        public IGamePlayer GetPlayer(string searchString, UserSearchMode searchMode)
+        public IGamePlayer? GetPlayer(string searchString, UserSearchMode searchMode)
         {
-            IGamePlayer player = null;
+            IGamePlayer? player = null;
 
             if (searchMode == UserSearchMode.FindById || searchMode == UserSearchMode.FindByNameOrId)
             {

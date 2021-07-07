@@ -19,7 +19,7 @@ namespace Deathmatch.Core.Loadouts
         private List<ILoadout> _loadouts;
         private readonly IDataStore _dataStore;
 
-        public LoadoutCategory(string title, IReadOnlyCollection<string> aliases, IOpenModComponent component, IDataStore dataStore, List<ILoadout> loadouts = null)
+        public LoadoutCategory(string title, IReadOnlyCollection<string>? aliases, IOpenModComponent component, IDataStore dataStore, List<ILoadout>? loadouts = null)
         {
             Title = title;
             Aliases = aliases ?? new List<string>();
@@ -30,7 +30,7 @@ namespace Deathmatch.Core.Loadouts
             _loadouts = loadouts ?? new List<ILoadout>();
         }
 
-        public ILoadout GetLoadout(string title) =>
+        public ILoadout? GetLoadout(string title) =>
             _loadouts.FirstOrDefault(x => x.Title.Equals(title, StringComparison.OrdinalIgnoreCase));
 
         public IReadOnlyCollection<ILoadout> GetLoadouts() => _loadouts.AsReadOnly();

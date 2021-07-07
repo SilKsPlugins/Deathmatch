@@ -20,7 +20,7 @@ namespace Deathmatch.Core.Loadouts
 
         public IReadOnlyCollection<ILoadoutCategory> GetCategories() => _categories.AsReadOnly();
 
-        public ILoadoutCategory GetCategory(string title) =>
+        public ILoadoutCategory? GetCategory(string title) =>
             _categories.FirstOrDefault(x => x.Title.Equals(title, StringComparison.OrdinalIgnoreCase)) ??
             _categories.FirstOrDefault(x => x.Aliases.Any(y => y.Equals(title, StringComparison.OrdinalIgnoreCase)));
 

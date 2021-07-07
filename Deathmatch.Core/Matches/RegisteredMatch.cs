@@ -20,7 +20,7 @@ namespace Deathmatch.Core.Matches
             if (!typeof(IMatch).IsAssignableFrom(type))
                 throw new ArgumentException($"Argument is not assignable from {nameof(IMatch)}", nameof(type));
 
-            Id = type.FullName;
+            Id = type.FullName!;
 
             var match = type.GetCustomAttribute<MatchAttribute>();
             var matchDescription = type.GetCustomAttribute<MatchDescriptionAttribute>();

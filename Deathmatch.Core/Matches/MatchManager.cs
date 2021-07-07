@@ -35,12 +35,12 @@ namespace Deathmatch.Core.Matches
                 .OrderBy(x => x.Priority, _priorityComparer).ToList().AsReadOnly();
         }
 
-        public IMatchRegistration GetMatchRegistration(string title)
+        public IMatchRegistration? GetMatchRegistration(string title)
         {
             var registrations = GetEnabledMatchRegistrations();
 
-            IMatchRegistration titleMatch = null;
-            IMatchRegistration aliasMatch = null;
+            IMatchRegistration? titleMatch = null;
+            IMatchRegistration? aliasMatch = null;
 
             foreach (var registration in registrations)
             {
@@ -50,8 +50,7 @@ namespace Deathmatch.Core.Matches
                     break;
                 }
 
-                if (registration.Aliases != null &&
-                    registration.Aliases.Any(x => title.Equals(x, StringComparison.OrdinalIgnoreCase)))
+                if (registration.Aliases.Any(x => title.Equals(x, StringComparison.OrdinalIgnoreCase)))
                 {
                     aliasMatch = registration;
                 }

@@ -29,7 +29,7 @@ namespace Deathmatch.Core.Preservation
             Provider.onEnemyDisconnected += OnEnemyDisconnected;
         }
 
-        private PreservedPlayer GetPreservedPlayer(CSteamID steamId) =>
+        private PreservedPlayer? GetPreservedPlayer(CSteamID steamId) =>
             _preservedPlayers.FirstOrDefault(x => x.SteamId == steamId);
 
         public async UniTask PreservePlayer(IGamePlayer player)
@@ -109,7 +109,7 @@ namespace Deathmatch.Core.Preservation
         }
 
         private delegate void PlayerSaving(Player player, ref bool cancel);
-        private static event PlayerSaving OnPlayerSaving;
+        private static event PlayerSaving? OnPlayerSaving;
 
         [HarmonyPatch]
         // ReSharper disable UnusedType.Local

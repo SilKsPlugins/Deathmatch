@@ -18,7 +18,7 @@ namespace Deathmatch.Core.Matches
 {
     public abstract class MatchBase : IMatch
     {
-        protected static Random Rng = new Random();
+        protected static Random Rng = new();
 
         protected readonly IConfiguration Configuration;
         protected readonly IStringLocalizer StringLocalizer;
@@ -38,23 +38,23 @@ namespace Deathmatch.Core.Matches
             Players = new List<IGamePlayer>();
         }
 
-        public IMatchRegistration Registration { get; set; }
+        public IMatchRegistration Registration { get; set; } = null!;
 
         public bool IsRunning { get; protected set; }
         public bool HasRun { get; protected set; }
 
         public IReadOnlyCollection<IGamePlayer> GetPlayers() => Players.AsReadOnly();
 
-        public IGamePlayer GetPlayer(CSteamID steamId) =>
+        public IGamePlayer? GetPlayer(CSteamID steamId) =>
             Players.FirstOrDefault(x => x.SteamId == steamId);
 
-        public IGamePlayer GetPlayer(Player player) => GetPlayer(player.channel.owner.playerID.steamID);
+        public IGamePlayer? GetPlayer(Player player) => GetPlayer(player.channel.owner.playerID.steamID);
 
-        public IGamePlayer GetPlayer(UnturnedPlayer player) => GetPlayer(player.SteamId);
+        public IGamePlayer? GetPlayer(UnturnedPlayer player) => GetPlayer(player.SteamId);
 
-        public IGamePlayer GetPlayer(UnturnedUser user) => GetPlayer(user.SteamId);
+        public IGamePlayer? GetPlayer(UnturnedUser user) => GetPlayer(user.SteamId);
 
-        public IGamePlayer GetPlayer(IGamePlayer player) => GetPlayer(player.SteamId);
+        public IGamePlayer? GetPlayer(IGamePlayer player) => GetPlayer(player.SteamId);
 
         public abstract UniTask AddPlayer(IGamePlayer player);
         public abstract UniTask AddPlayers(IEnumerable<IGamePlayer> player);

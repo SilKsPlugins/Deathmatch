@@ -33,7 +33,7 @@ namespace Deathmatch.Core.Matches
             _stringLocalizer = stringLocalizer;
         }
 
-        public Task HandleEventAsync(object sender, UnturnedUserDisconnectedEvent @event)
+        public Task HandleEventAsync(object? sender, UnturnedUserDisconnectedEvent @event)
         {
             var player = _playerManager.GetPlayer(@event.User);
 
@@ -45,7 +45,7 @@ namespace Deathmatch.Core.Matches
             return Task.CompletedTask;
         }
 
-        public Task HandleEventAsync(object sender, CommandExecutingEvent @event)
+        public Task HandleEventAsync(object? sender, CommandExecutingEvent @event)
         {
             if (@event.Actor is UnturnedUser user)
             {

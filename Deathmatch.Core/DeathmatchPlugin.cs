@@ -56,6 +56,8 @@ namespace Deathmatch.Core
             _configuration = configuration;
             _stringLocalizer = stringLocalizer;
             _serviceProvider = serviceProvider;
+
+            _cancellationTokenSource = new CancellationTokenSource();
         }
 
         protected override async UniTask OnLoadAsync()
@@ -142,12 +144,19 @@ namespace Deathmatch.Core
 
         private async UniTask MatchAutoStartLoop()
         {
-            if (_loopStarted) return;
+            if (_loopStarted)
+            {
+                return;
+            }
+
             _loopStarted = true;
 
-            int delay = _configuration.GetValue<int>("MatchInterval");
+            var delay = _configuration.GetValue<int>("MatchInterval");
 
-            if (delay <= 0) return;
+            if (delay <= 0)
+            {
+                return;
+            }
 
             var announcements = _configuration.GetSection("AutoAnnouncements").Get<List<AutoAnnouncement>>() ??
                                 new List<AutoAnnouncement>();
@@ -157,21 +166,21 @@ namespace Deathmatch.Core
 
             announcements.RemoveAll(x => x.SecondsBefore > delay);
 
-            announcements.Add(new AutoAnnouncement()
+            announcements.Add(new AutoAnnouncement
             {
                 SecondsBefore = 0,
                 MessageTime = null
             });
 
-            var delays = new List<Tuple<int, string>>();
+            var delays = new List<(int,string?)>();
 
-            for (int i = 0; i < announcements.Count; i++)
+            for (var i = 0; i < announcements.Count; i++)
             {
                 var a = announcements[i];
 
-                int prevDelay = i == 0 ? delay : announcements[i - 1].SecondsBefore;
+                var prevDelay = i == 0 ? delay : announcements[i - 1].SecondsBefore;
 
-                delays.Add(Tuple.Create(prevDelay - a.SecondsBefore, a.MessageTime));
+                delays.Add((prevDelay - a.SecondsBefore, a.MessageTime));
             }
 
             // Always wait thirty seconds
@@ -179,7 +188,7 @@ namespace Deathmatch.Core
 
             while (!_cancellationTokenSource.IsCancellationRequested)
             {
-                IMatchRegistration registration = null;
+                IMatchRegistration? registration = null;
 
                 if (_matchExecutor.CurrentMatch == null || !_matchExecutor.CurrentMatch.IsRunning)
                 {

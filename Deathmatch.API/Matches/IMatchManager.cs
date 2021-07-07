@@ -10,7 +10,7 @@ namespace Deathmatch.API.Matches
 
         IReadOnlyCollection<IMatchRegistration> GetMatchRegistrations();
         IReadOnlyCollection<IMatchRegistration> GetEnabledMatchRegistrations();
-        IMatchRegistration GetMatchRegistration(string title);
+        IMatchRegistration? GetMatchRegistration(string title);
 
         void AddMatchProvider(IMatchProvider provider);
         void RemoveMatchProvider(IMatchProvider provider);

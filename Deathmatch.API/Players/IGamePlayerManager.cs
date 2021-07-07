@@ -16,8 +16,8 @@ namespace Deathmatch.API.Players
 
         IReadOnlyCollection<IGamePlayer> GetPlayers(Predicate<IGamePlayer> predicate);
 
-        IGamePlayer GetPlayer(Predicate<IGamePlayer> predicate);
+        IGamePlayer? GetPlayer(Predicate<IGamePlayer> predicate);
         
-        IGamePlayer GetPlayer(string searchString, UserSearchMode searchMode);
+        IGamePlayer? GetPlayer(string searchString, UserSearchMode searchMode);
     }
 }

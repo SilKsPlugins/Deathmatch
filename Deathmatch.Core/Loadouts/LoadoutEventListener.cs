@@ -14,7 +14,7 @@ namespace Deathmatch.Core.Loadouts
             _loadoutSelector = loadoutSelector;
         }
 
-        public async Task HandleEventAsync(object sender, IGamePlayerConnectedEvent @event)
+        public async Task HandleEventAsync(object? sender, IGamePlayerConnectedEvent @event)
         {
             if (_loadoutSelector is LoadoutSelector selector)
             {
@@ -22,7 +22,7 @@ namespace Deathmatch.Core.Loadouts
             }
         }
 
-        public async Task HandleEventAsync(object sender, IGamePlayerDisconnectedEvent @event)
+        public async Task HandleEventAsync(object? sender, IGamePlayerDisconnectedEvent @event)
         {
             if (_loadoutSelector is LoadoutSelector selector)
             {

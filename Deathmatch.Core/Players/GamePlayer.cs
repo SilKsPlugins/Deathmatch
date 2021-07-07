@@ -14,15 +14,15 @@ namespace Deathmatch.Core.Players
     {
         public UnturnedUser User { get; }
 
-        public IMatch CurrentMatch { get; set; }
+        public IMatch? CurrentMatch { get; set; }
 
-        private readonly Dictionary<string, object> _matchData;
+        private readonly Dictionary<string, object?> _matchData;
 
         internal GamePlayer(UnturnedUser user)
         {
             User = user;
 
-            _matchData = new Dictionary<string, object>();
+            _matchData = new Dictionary<string, object?>();
         }
 
         public bool IsInActiveMatch()
@@ -30,7 +30,7 @@ namespace Deathmatch.Core.Players
             return CurrentMatch != null && CurrentMatch.IsRunning;
         }
 
-        public T GetMatchData<T>(string key)
+        public T? GetMatchData<T>(string key)
         {
             if (_matchData.TryGetValue(key, out var value) && value is T data)
             {
@@ -87,7 +87,7 @@ namespace Deathmatch.Core.Players
 
                 int count = Inventory.getItemCount(page);
 
-                for (int i = 0; i < count; i++)
+                for (var i = 0; i < count; i++)
                 {
                     Inventory.removeItem(page, 0);
                 }
@@ -112,14 +112,9 @@ namespace Deathmatch.Core.Players
 
         public PlayerSkills Skills => Player.skills;
 
-        public void MaxSkills(bool overpower = false)
+        public void MaxSkills()
         {
-            foreach (var skill in Skills.skills.SelectMany(x => x))
-            {
-                skill.level = overpower ? byte.MaxValue : skill.max;
-            }
-
-            Skills.askSkills(SteamId);
+            Skills.ServerUnlockAllSkills();
         }
 
         public PlayerStance Stance => Player.stance;

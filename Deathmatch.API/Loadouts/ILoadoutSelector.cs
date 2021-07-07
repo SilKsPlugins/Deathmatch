@@ -7,7 +7,7 @@ namespace Deathmatch.API.Loadouts
     [Service]
     public interface ILoadoutSelector
     {
-        ILoadout GetLoadout(IGamePlayer player, string category);
+        ILoadout? GetLoadout(IGamePlayer player, string category);
         Task SetLoadout(IGamePlayer player, string category, string loadout);
     }
 }

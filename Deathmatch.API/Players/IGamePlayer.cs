@@ -1,4 +1,5 @@
-﻿using Deathmatch.API.Matches;
+﻿using Cysharp.Threading.Tasks;
+using Deathmatch.API.Matches;
 using OpenMod.Unturned.Users;
 using SDG.Unturned;
 using Steamworks;
@@ -11,10 +12,10 @@ namespace Deathmatch.API.Players
     {
         UnturnedUser User { get; }
 
-        IMatch CurrentMatch { get; set; }
+        IMatch? CurrentMatch { get; set; }
         bool IsInActiveMatch();
 
-        T GetMatchData<T>(string key);
+        T? GetMatchData<T>(string key);
         void SetMatchData<T>(string key, T value);
         void ClearMatchData();
 
@@ -44,7 +45,7 @@ namespace Deathmatch.API.Players
 
         PlayerSkills Skills { get; }
 
-        void MaxSkills(bool overpower = false);
+        void MaxSkills();
 
         PlayerStance Stance { get; }
     }

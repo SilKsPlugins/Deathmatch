@@ -6,6 +6,7 @@ using Deathmatch.Core.Matches.Events;
 using Deathmatch.Core.Players.Events;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Logging;
 using OpenMod.API;
 using OpenMod.API.Eventing;
 using OpenMod.API.Ioc;
@@ -13,30 +14,32 @@ using OpenMod.API.Plugins;
 using OpenMod.API.Prioritization;
 using OpenMod.Core.Localization;
 using OpenMod.Core.Plugins;
+using SilK.Unturned.Extras.Events;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Reflection;
-using System.Threading.Tasks;
 
 namespace Deathmatch.Core.Matches
 {
     [ServiceImplementation(Lifetime = ServiceLifetime.Singleton, Priority = Priority.Lowest)]
     public class MatchExecutor : IMatchExecutor
     {
+        public IMatch? CurrentMatch { get; private set; }
+
         private readonly IRuntime _runtime;
         private readonly IEventBus _eventBus;
         private readonly IMatchManager _matchManager;
         private readonly IStringLocalizer _stringLocalizer;
         private readonly IPluginAccessor<DeathmatchPlugin> _pluginAccessor;
         private readonly IPluginActivator _pluginActivator;
+        private readonly IEventSubscriber _eventSubscriber;
+        private readonly ILogger<MatchExecutor> _logger;
         private readonly IServiceProvider _serviceProvider;
-
 
         private readonly Random _rng;
         private readonly List<IGamePlayer> _participants;
-        private readonly HashSet<Type> _subscribedTotalEvents;
+        private IDisposable? _matchEventSubscriptionDisposer;
 
         public MatchExecutor(IRuntime runtime,
             IEventBus eventBus,
@@ -44,6 +47,8 @@ namespace Deathmatch.Core.Matches
             IPluginAccessor<DeathmatchPlugin> pluginAccessor,
             IPluginActivator pluginActivator,
             IStringLocalizerFactory stringLocalizerFactory,
+            IEventSubscriber eventSubscriber,
+            ILogger<MatchExecutor> logger,
             IServiceProvider serviceProvider)
         {
             _runtime = runtime;
@@ -51,6 +56,8 @@ namespace Deathmatch.Core.Matches
             _matchManager = matchManager;
             _pluginAccessor = pluginAccessor;
             _pluginActivator = pluginActivator;
+            _eventSubscriber = eventSubscriber;
+            _logger = logger;
             _serviceProvider = serviceProvider;
 
             string workingDir = PluginHelper.GetWorkingDirectory(_runtime, "Deathmatch.Core");
@@ -61,7 +68,6 @@ namespace Deathmatch.Core.Matches
 
             _rng = new Random();
             _participants = new List<IGamePlayer>();
-            _subscribedTotalEvents = new HashSet<Type>();
         }
 
         public IReadOnlyCollection<IGamePlayer> GetParticipants() => _participants.AsReadOnly();
@@ -134,11 +140,7 @@ namespace Deathmatch.Core.Matches
             }
         }
 
-        public IMatch CurrentMatch { get; private set; }
-
-        private Dictionary<Type, MethodInfo> _subscribedMatchEvents;
-
-        public async UniTask<bool> StartMatch(IMatchRegistration registration = null)
+        public async UniTask<bool> StartMatch(IMatchRegistration? registration = null)
         {
             if (CurrentMatch != null && CurrentMatch.IsRunning)
             {
@@ -149,7 +151,10 @@ namespace Deathmatch.Core.Matches
             {
                 var registrations = _matchManager.GetEnabledMatchRegistrations();
 
-                if (registrations == null || registrations.Count == 0) return false;
+                if (registrations.Count == 0)
+                {
+                    return false;
+                }
 
                 registration = registrations.ElementAt(_rng.Next(registrations.Count));
             }
@@ -168,6 +173,8 @@ namespace Deathmatch.Core.Matches
                 }
             }
 
+            // Create instance
+
             CurrentMatch = registration.Instantiate(serviceProvider);
 
             if (CurrentMatch == null)
@@ -177,26 +184,22 @@ namespace Deathmatch.Core.Matches
 
             CurrentMatch.Registration = registration;
 
-            // Custom event implementation
+            // Subscribe events
 
-            var eventListeners = CurrentMatch.GetType().GetInterfaces().Where(x =>
-                x.IsGenericType && x.GetGenericTypeDefinition().IsAssignableFrom(typeof(IMatchEventListener<>)));
+            _matchEventSubscriptionDisposer = _eventSubscriber.Subscribe(CurrentMatch, _runtime);
 
-            _subscribedMatchEvents = new Dictionary<Type, MethodInfo>();
+            // Emit MatchStartingEvent 
 
-            foreach (var listener in eventListeners)
+            var startingEvent = new MatchStartingEvent(CurrentMatch);
+
+            await _eventBus.EmitAsync(_runtime, this, startingEvent);
+
+            if (startingEvent.IsCancelled)
             {
-                var eventType = listener.GetGenericArguments().Single();
-
-                _subscribedMatchEvents.Add(eventType, listener.GetMethod("HandleEventAsync", BindingFlags.Public | BindingFlags.Instance));
-
-                if (!_subscribedTotalEvents.Contains(eventType))
-                {
-                    _subscribedTotalEvents.Add(eventType);
-
-                    _eventBus.Subscribe(_pluginAccessor.Instance, eventType, HandleEventAsync);
-                }
+                return false;
             }
+            
+            // Prepare players
 
             foreach (IGamePlayer player in _participants)
             {
@@ -207,19 +210,23 @@ namespace Deathmatch.Core.Matches
                 await CurrentMatch.AddPlayer(player);
             }
 
-            var startingEvent = new MatchStartingEvent(CurrentMatch);
+            // Start match
 
-            await _eventBus.EmitAsync(_runtime, this, startingEvent);
+            var success = false;
 
-            if (startingEvent.IsCancelled)
+            try
             {
-                return false;
+                success = await CurrentMatch.StartMatch();
             }
-
-            bool success = await CurrentMatch.StartMatch();
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Exception occurred when attempting to start match");
+            }
 
             if (success)
             {
+                // Emit MatchStartedEvent
+
                 var startedEvent = new MatchStartedEvent(CurrentMatch);
 
                 await _eventBus.EmitAsync(_runtime, this, startedEvent);
@@ -241,7 +248,23 @@ namespace Deathmatch.Core.Matches
 
             await UniTask.SwitchToMainThread();
 
-            bool success = await CurrentMatch.EndMatch();
+            var success = false;
+
+            try
+            {
+                success = await CurrentMatch.EndMatch();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Exception occurred when attempting to end match");
+            }
+
+            if (!success)
+            {
+                return false;
+            }
+
+            // Clean up players
 
             foreach (var player in _participants)
             {
@@ -249,26 +272,17 @@ namespace Deathmatch.Core.Matches
                 player.CurrentMatch = null;
             }
 
-            if (success)
-            {
-                var endedEvent = new MatchEndedEvent(CurrentMatch);
+            // Emit MatchEndedEvent
 
-                await _eventBus.EmitAsync(_runtime, this, endedEvent);
-            }
+            var endedEvent = new MatchEndedEvent(CurrentMatch);
+
+            await _eventBus.EmitAsync(_runtime, this, endedEvent);
+
+            // Clear current match
 
             CurrentMatch = null;
 
-            return success;
-        }
-
-        public async Task HandleEventAsync(IServiceProvider serviceProvider, object sender, IEvent @event)
-        {
-            if (CurrentMatch == null || !CurrentMatch.IsRunning) return;
-
-            if (_subscribedMatchEvents.TryGetValue(@event.GetType(), out var method))
-            {
-                await (Task)method.Invoke(CurrentMatch, new[] { sender, @event });
-            }
+            return true;
         }
     }
 }

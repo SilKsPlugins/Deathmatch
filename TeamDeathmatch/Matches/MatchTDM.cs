@@ -62,26 +62,25 @@ namespace TeamDeathmatch.Matches
             _permissionChecker = permissionChecker;
             _graceManager = graceManager;
 
+            _tokenSource = new CancellationTokenSource();
+
             _redDeaths = 0;
             _blueDeaths = 0;
         }
 
         public IReadOnlyCollection<PlayerSpawn> GetSpawns(Team team)
         {
-            switch (team)
+            return team switch
             {
-                case Team.Red:
-                    return _pluginAccessor.Instance.RedSpawns;
-                case Team.Blue:
-                    return _pluginAccessor.Instance.BlueSpawns;
-                default:
-                    throw new InvalidOperationException("Player has no team");
-            }
+                Team.Red => _pluginAccessor.Instance!.RedSpawns,
+                Team.Blue => _pluginAccessor.Instance!.BlueSpawns,
+                _ => throw new InvalidOperationException("Player has no team")
+            };
         }
 
         public IReadOnlyCollection<PlayerSpawn> GetSpawns(IGamePlayer player) => GetSpawns(player.GetTeam());
 
-        public async Task<ILoadout> GetLoadout(IGamePlayer player)
+        public async Task<ILoadout?> GetLoadout(IGamePlayer player)
         {
             const string category = "Team Deathmatch";
 

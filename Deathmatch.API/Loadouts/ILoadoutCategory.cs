@@ -12,7 +12,7 @@ namespace Deathmatch.API.Loadouts
 
         IOpenModComponent Component { get; }
 
-        ILoadout GetLoadout(string title);
+        ILoadout? GetLoadout(string title);
         IReadOnlyCollection<ILoadout> GetLoadouts();
 
         Task SaveLoadouts();

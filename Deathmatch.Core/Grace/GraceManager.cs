@@ -76,7 +76,7 @@ namespace Deathmatch.Core.Grace
                 RevokeGracePeriod(player);
         }
 
-        public Task OnPlayerDamaging(IServiceProvider serviceProvider, object sender, UnturnedPlayerDamagingEvent @event)
+        public Task OnPlayerDamaging(IServiceProvider serviceProvider, object? sender, UnturnedPlayerDamagingEvent @event)
         {
             var player = _playerManager.GetPlayer(@event.Player);
 
@@ -87,7 +87,7 @@ namespace Deathmatch.Core.Grace
         }
 
         private delegate void EquipmentInput(Player player, bool inputPrimary, bool inputSecondary);
-        private static event EquipmentInput OnEquipmentInput;
+        private static event EquipmentInput? OnEquipmentInput;
 
         [HarmonyPatch]
         private class Patches

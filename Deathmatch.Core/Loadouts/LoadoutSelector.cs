@@ -2,12 +2,10 @@
 using Deathmatch.API.Players;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using OpenMod.API;
-using OpenMod.API.Eventing;
 using OpenMod.API.Ioc;
 using OpenMod.API.Prioritization;
 using OpenMod.API.Users;
-using OpenMod.Core.Helpers;
+using OpenMod.Common.Helpers;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,7 +14,7 @@ using System.Threading.Tasks;
 namespace Deathmatch.Core.Loadouts
 {
     [ServiceImplementation(Lifetime = ServiceLifetime.Singleton, Priority = Priority.Lowest)]
-    public class LoadoutSelector : ILoadoutSelector
+    public sealed class LoadoutSelector : ILoadoutSelector
     {
         private readonly ILoadoutManager _loadoutManager;
         private readonly IUserDataStore _userDataStore;
@@ -26,9 +24,6 @@ namespace Deathmatch.Core.Loadouts
 
         public LoadoutSelector(ILoadoutManager loadoutManager,
             IUserDataStore userDataStore,
-            IGamePlayerManager playerManager,
-            IEventBus eventBus,
-            IRuntime runtime,
             ILogger<LoadoutSelector> logger)
         {
             _loadoutManager = loadoutManager;
@@ -38,14 +33,18 @@ namespace Deathmatch.Core.Loadouts
             _loadoutSelections = new Dictionary<IGamePlayer, List<LoadoutSelection>>();
         }
 
-        public ILoadout GetLoadout(IGamePlayer player, string category)
+        public ILoadout? GetLoadout(IGamePlayer player, string category)
         {
             var loadoutCategory = _loadoutManager.GetCategory(category);
 
-            if (loadoutCategory == null) return null;
+            if (loadoutCategory == null)
+            {
+                return null;
+            }
 
             var loadoutTitle = _loadoutSelections[player]
-                .FirstOrDefault(x => x.GameMode.Equals(loadoutCategory.Title, StringComparison.OrdinalIgnoreCase))?.Loadout;
+                .FirstOrDefault(x => x.GameMode.Equals(loadoutCategory.Title, StringComparison.OrdinalIgnoreCase))
+                ?.Loadout;
 
             return loadoutTitle == null ? null : loadoutCategory.GetLoadout(loadoutTitle);
         }
@@ -88,12 +87,16 @@ namespace Deathmatch.Core.Loadouts
                 await _userDataStore.GetUserDataAsync<object>(player.User.Id, player.User.Type,
                     LoadoutSelectionsKey);
 
-            List<object> selections = null;
+            List<object>? selections = null;
 
             if (userData is List<object> objects)
+            {
                 selections = objects;
+            }
             else if (userData is List<LoadoutSelection> other)
+            {
                 selections = other.Cast<object>().ToList();
+            }
 
             var loaded = new List<LoadoutSelection>();
 

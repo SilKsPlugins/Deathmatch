@@ -7,6 +7,6 @@ namespace Deathmatch.Core.Configuration
     {
         public int SecondsBefore { get; set; }
 
-        public string MessageTime { get; set; }
+        public string? MessageTime { get; set; }
     }
 }
