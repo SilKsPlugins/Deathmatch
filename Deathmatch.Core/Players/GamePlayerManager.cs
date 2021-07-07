@@ -1,4 +1,5 @@
 ﻿using Deathmatch.API.Players;
+using Deathmatch.Core.Helpers;
 using Deathmatch.Core.Players.Events;
 using Microsoft.Extensions.DependencyInjection;
 using OpenMod.API;
@@ -8,15 +9,11 @@ using OpenMod.API.Prioritization;
 using OpenMod.API.Users;
 using OpenMod.Core.Helpers;
 using OpenMod.Core.Users;
-using OpenMod.Unturned.Players;
 using OpenMod.Unturned.Users;
-using SDG.Unturned;
-using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using StringHelper = Deathmatch.Core.Helpers.StringHelper;
 
 namespace Deathmatch.Core.Players
 {
@@ -64,7 +61,7 @@ namespace Deathmatch.Core.Players
 
         internal async Task RemoveUser(UnturnedUser user)
         {
-            var player = GetPlayer(user);
+            var player = this.GetPlayer(user);
 
             if (player != null)
             {
@@ -83,14 +80,6 @@ namespace Deathmatch.Core.Players
             return _players.Where(predicate.Invoke).ToList().AsReadOnly();
         }
 
-        public IGamePlayer GetPlayer(CSteamID steamId) => GetPlayer(x => x.SteamId == steamId);
-
-        public IGamePlayer GetPlayer(Player player) => GetPlayer(player.channel.owner.playerID.steamID);
-
-        public IGamePlayer GetPlayer(UnturnedPlayer player) => player == null ? null : GetPlayer(player.SteamId);
-
-        public IGamePlayer GetPlayer(UnturnedUser user) => user == null ? null : GetPlayer(x => x.User.Equals(user));
-
         public IGamePlayer GetPlayer(Predicate<IGamePlayer> predicate)
         {
             return _players.FirstOrDefault(predicate.Invoke);
@@ -104,35 +93,13 @@ namespace Deathmatch.Core.Players
             {
                 if (ulong.TryParse(searchString, out var id))
                 {
-                    player = GetPlayer(x => x.SteamId.m_SteamID == id);
-
-                    if (player != null)
-                        return player;
-                }
-
-                if (searchMode == UserSearchMode.FindById)
-                {
-                    return null;
+                    player = this.GetPlayer(id);
                 }
             }
 
-            searchString = searchString.ToLower();
-
-            int minDist = 0;
-
-            foreach (var gamePlayer in _players)
+            if (searchMode == UserSearchMode.FindByName || searchMode == UserSearchMode.FindByNameOrId)
             {
-                string name = gamePlayer.DisplayName.ToLower();
-
-                if (!name.Contains(searchString)) continue;
-
-                int dist = StringHelper.Distance(name, searchString);
-
-                if (player == null || minDist < dist)
-                {
-                    player = gamePlayer;
-                    minDist = dist;
-                }
+                player ??= _players.FindBestMatch(x => x.DisplayName, searchString);
             }
 
             return player;
