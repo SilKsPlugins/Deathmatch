@@ -1,8 +1,8 @@
 ﻿using Deathmatch.API.Players;
+using Deathmatch.Core.Players.Extensions;
 using HarmonyLib;
 using OpenMod.Unturned.Players;
 using OpenMod.Unturned.Users;
-using SDG.NetTransport;
 using SDG.Unturned;
 using System;
 using UnityEngine;
@@ -69,11 +69,7 @@ namespace Deathmatch.Core.Spawns
         {
             if (player.life.isDead)
             {
-                var b = MeasurementTool.angleToByte(Yaw);
-
-                player.life.sendRevive();
-                SendRevive.InvokeAndLoopback(player.life.GetNetId(), ENetReliability.Reliable,
-                    Provider.EnumerateClients_Remote(), ToVector3(), b);
+                player.ForceRespawn(ToVector3(), Yaw);
             }
             else
             {

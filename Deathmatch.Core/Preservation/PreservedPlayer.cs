@@ -1,11 +1,11 @@
 ﻿using Deathmatch.API.Players;
+using Deathmatch.Core.Players.Extensions;
 using Deathmatch.Core.Preservation.Clothing;
 using Deathmatch.Core.Preservation.Groups;
 using Deathmatch.Core.Preservation.Inventory;
 using Deathmatch.Core.Preservation.Life;
 using Deathmatch.Core.Preservation.Skills;
 using HarmonyLib;
-using SDG.NetTransport;
 using SDG.Unturned;
 using Steamworks;
 using System.Reflection;
@@ -32,36 +32,30 @@ namespace Deathmatch.Core.Preservation
 
         private readonly PreservedGroup _group;
 
-        private static readonly ClientInstanceMethod<Vector3, byte> SendRevive =
-            AccessTools.StaticFieldRefAccess<PlayerLife, ClientInstanceMethod<Vector3, byte>>("SendRevive");
-
-        private static readonly FieldInfo LastRespawn = AccessTools.Field(typeof(PlayerLife), "_lastRespawn");
-
         public PreservedPlayer(IGamePlayer player)
         {
             Player = player;
 
             if (player.IsDead)
             {
-                LastRespawn.SetValue(player.Life, 0f);
-                player.Life.ReceiveRespawnRequest(false);
+                Player.ForceRespawn();
             }
 
-            _position = player.Player.transform.position;
-            _yaw = player.Transform.eulerAngles.y;
+            _position = Player.Player.transform.position;
+            _yaw = Player.Transform.eulerAngles.y;
 
-            _stance = player.Stance.stance;
+            _stance = Player.Stance.stance;
 
-            _clothing = new PreservedClothing(player.Clothing);
-            _inventory = new PreservedInventory(player.Inventory);
+            _clothing = new PreservedClothing(Player.Clothing);
+            _inventory = new PreservedInventory(Player.Inventory);
 
-            _skills = new PreservedSkills(player.Skills);
+            _skills = new PreservedSkills(Player.Skills);
 
-            _life = new PreservedLife(player.Life);
+            _life = new PreservedLife(Player.Life);
 
-            _group = new PreservedGroup(player.Quests);
+            _group = new PreservedGroup(Player.Quests);
 
-            player.Player.save();
+            Player.Player.save();
         }
 
         public void Restore()
@@ -74,11 +68,7 @@ namespace Deathmatch.Core.Preservation
             // Position - this is first as we'll revive the player if they're dead
             if (Player.Life.isDead)
             {
-                var b = MeasurementTool.angleToByte(_yaw);
-
-                Player.Life.sendRevive();
-                SendRevive.InvokeAndLoopback(Player.Life.GetNetId(), ENetReliability.Reliable,
-                    Provider.EnumerateClients_Remote(), _position, b);
+                Player.ForceRespawn(_position, _yaw);
             }
             else
             {
