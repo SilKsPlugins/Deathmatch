@@ -4,8 +4,11 @@ using Deathmatch.Core.Preservation.Groups;
 using Deathmatch.Core.Preservation.Inventory;
 using Deathmatch.Core.Preservation.Life;
 using Deathmatch.Core.Preservation.Skills;
+using HarmonyLib;
+using SDG.NetTransport;
 using SDG.Unturned;
 using Steamworks;
+using System.Reflection;
 using UnityEngine;
 
 namespace Deathmatch.Core.Preservation
@@ -29,13 +32,19 @@ namespace Deathmatch.Core.Preservation
 
         private readonly PreservedGroup _group;
 
+        private static readonly ClientInstanceMethod<Vector3, byte> SendRevive =
+            AccessTools.StaticFieldRefAccess<PlayerLife, ClientInstanceMethod<Vector3, byte>>("SendRevive");
+
+        private static readonly FieldInfo LastRespawn = AccessTools.Field(typeof(PlayerLife), "_lastRespawn");
+
         public PreservedPlayer(IGamePlayer player)
         {
             Player = player;
 
             if (player.IsDead)
             {
-                player.Player.life.askRespawn(player.SteamId, false);
+                LastRespawn.SetValue(player.Life, 0f);
+                player.Life.ReceiveRespawnRequest(false);
             }
 
             _position = player.Player.transform.position;
@@ -65,14 +74,11 @@ namespace Deathmatch.Core.Preservation
             // Position - this is first as we'll revive the player if they're dead
             if (Player.Life.isDead)
             {
-                byte b = MeasurementTool.angleToByte(_yaw);
+                var b = MeasurementTool.angleToByte(_yaw);
 
                 Player.Life.sendRevive();
-                Player.Life.channel.send("tellRevive", ESteamCall.ALL, ESteamPacket.UPDATE_RELIABLE_BUFFER, new object[]
-                {
-                    _position,
-                    b
-                });
+                SendRevive.InvokeAndLoopback(Player.Life.GetNetId(), ENetReliability.Reliable,
+                    Provider.EnumerateClients_Remote(), _position, b);
             }
             else
             {

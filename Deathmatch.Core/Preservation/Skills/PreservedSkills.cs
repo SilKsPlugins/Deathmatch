@@ -1,4 +1,7 @@
-﻿using SDG.Unturned;
+﻿using HarmonyLib;
+using SDG.NetTransport;
+using SDG.Unturned;
+using System.Reflection;
 
 namespace Deathmatch.Core.Preservation.Skills
 {
@@ -8,6 +11,12 @@ namespace Deathmatch.Core.Preservation.Skills
         private readonly int _reputation;
         private readonly byte[][] _skillLevels;
 
+        private static readonly ClientInstanceMethod SendMultipleSkillLevels =
+            AccessTools.StaticFieldRefAccess<PlayerSkills, ClientInstanceMethod>("SendMultipleSkillLevels");
+
+        private static readonly MethodInfo WriteSkillLevels =
+            AccessTools.Method(typeof(PlayerSkills), "WriteSkillLevels");
+
         public PreservedSkills(PlayerSkills skills)
         {
             _experience = skills.experience;
@@ -15,11 +24,11 @@ namespace Deathmatch.Core.Preservation.Skills
 
             _skillLevels = new byte[skills.skills.Length][];
 
-            for (int i = 0; i < skills.skills.Length; i++)
+            for (var i = 0; i < skills.skills.Length; i++)
             {
                 _skillLevels[i] = new byte[skills.skills[i].Length];
 
-                for (int j = 0; j < skills.skills[i].Length; j++)
+                for (var j = 0; j < skills.skills[i].Length; j++)
                 {
                     _skillLevels[i][j] = skills.skills[i][j].level;
                 }
@@ -28,26 +37,20 @@ namespace Deathmatch.Core.Preservation.Skills
 
         public void Restore(PlayerSkills skills)
         {
-            if (_experience > skills.experience)
-            {
-                skills.askAward(_experience - skills.experience);
-            }
-            else if (_experience < skills.experience)
-            {
-                skills.askAward(skills.experience - _experience);
-            }
+            skills.ServerSetExperience(_experience);
 
             skills.askRep(_reputation - skills.reputation);
 
-            for (int i = 0; i < _skillLevels.Length; i++)
+            for (var i = 0; i < _skillLevels.Length; i++)
             {
-                for (int j = 0; j < _skillLevels[i].Length; j++)
+                for (var j = 0; j < _skillLevels[i].Length; j++)
                 {
                     skills.skills[i][j].level = _skillLevels[i][j];
                 }
             }
 
-            skills.askSkills(skills.channel.owner.playerID.steamID);
+            SendMultipleSkillLevels.InvokeAndLoopback(skills.GetNetId(), ENetReliability.Reliable,
+                Provider.EnumerateClients_Remote(), x => WriteSkillLevels.Invoke(skills, new object[] {x}));
         }
     }
 }

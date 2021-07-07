@@ -1,6 +1,8 @@
 ﻿using Deathmatch.API.Players;
+using HarmonyLib;
 using OpenMod.Unturned.Players;
 using OpenMod.Unturned.Users;
+using SDG.NetTransport;
 using SDG.Unturned;
 using System;
 using UnityEngine;
@@ -18,7 +20,10 @@ namespace Deathmatch.Core.Spawns
 
         public float Yaw { get; set; }
 
-        public Vector3 ToVector3() => new Vector3(X, Y, Z);
+        public Vector3 ToVector3() => new(X, Y, Z);
+        
+        private static readonly ClientInstanceMethod<Vector3, byte> SendRevive =
+            AccessTools.StaticFieldRefAccess<PlayerLife, ClientInstanceMethod<Vector3, byte>>("SendRevive");
 
         public PlayerSpawn()
         {
@@ -64,14 +69,11 @@ namespace Deathmatch.Core.Spawns
         {
             if (player.life.isDead)
             {
-                byte b = MeasurementTool.angleToByte(Yaw);
+                var b = MeasurementTool.angleToByte(Yaw);
 
                 player.life.sendRevive();
-                player.life.channel.send("tellRevive", ESteamCall.ALL, ESteamPacket.UPDATE_RELIABLE_BUFFER, new object[]
-                {
-                    ToVector3(),
-                    b
-                });
+                SendRevive.InvokeAndLoopback(player.life.GetNetId(), ENetReliability.Reliable,
+                    Provider.EnumerateClients_Remote(), ToVector3(), b);
             }
             else
             {
