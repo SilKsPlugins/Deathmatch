@@ -27,7 +27,7 @@ namespace Deathmatch.Core.Players
         private readonly IRuntime _runtime;
         private readonly List<IGamePlayer> _players;
 
-        public GamePlayerManager(IUserManager userManager,
+        public GamePlayerManager(IUnturnedUserDirectory userDirectory,
             IEventBus eventBus,
             IRuntime runtime)
         {
@@ -37,15 +37,11 @@ namespace Deathmatch.Core.Players
 
             AsyncHelper.RunSync(async () =>
             {
-                var existingPlayers = await userManager.GetUsersAsync(KnownActorTypes.Player);
+                var existingPlayers = userDirectory.GetOnlineUsers();
 
-                foreach (var user in existingPlayers.OfType<UnturnedUser>())
+                foreach (var user in existingPlayers)
                 {
-                    var player = new GamePlayer(user);
-
-                    _players.Add(player);
-
-                    await _eventBus.EmitAsync(_runtime, this, new GamePlayerConnectedEvent(player));
+                    await AddUser(user);
                 }
             });
 
