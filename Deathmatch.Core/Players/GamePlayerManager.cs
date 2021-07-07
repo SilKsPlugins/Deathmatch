@@ -9,16 +9,19 @@ using OpenMod.API.Prioritization;
 using OpenMod.API.Users;
 using OpenMod.Core.Helpers;
 using OpenMod.Core.Users;
+using OpenMod.UnityEngine.Extensions;
 using OpenMod.Unturned.Users;
+using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using UnityEngine;
 
 namespace Deathmatch.Core.Players
 {
     [ServiceImplementation(Lifetime = ServiceLifetime.Singleton, Priority = Priority.Lowest)]
-    public class GamePlayerManager : IGamePlayerManager
+    public class GamePlayerManager : IGamePlayerManager, IDisposable
     {
         private readonly IEventBus _eventBus;
         private readonly IRuntime _runtime;
@@ -45,6 +48,13 @@ namespace Deathmatch.Core.Players
                     await _eventBus.EmitAsync(_runtime, this, new GamePlayerConnectedEvent(player));
                 }
             });
+
+            PlayerLife.OnSelectingRespawnPoint += OnSelectingRespawnPoint;
+        }
+
+        public void Dispose()
+        {
+            PlayerLife.OnSelectingRespawnPoint -= OnSelectingRespawnPoint;
         }
 
         internal async Task AddUser(UnturnedUser user)
@@ -103,6 +113,19 @@ namespace Deathmatch.Core.Players
             }
 
             return player;
+        }
+
+        private void OnSelectingRespawnPoint(PlayerLife sender, bool wantsToSpawnAtHome, ref Vector3 position, ref float yaw)
+        {
+            var player = this.GetPlayer(sender.player);
+
+            var @event =
+                new GamePlayerSelectingRespawnEvent(player, wantsToSpawnAtHome, position.ToSystemVector(), yaw);
+
+            AsyncHelper.RunSync(() => _eventBus.EmitAsync(_runtime, this, @event));
+
+            position = @event.Position.ToUnityVector();
+            yaw = @event.Yaw;
         }
     }
 }
