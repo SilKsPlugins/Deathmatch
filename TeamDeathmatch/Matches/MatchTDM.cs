@@ -392,7 +392,7 @@ namespace TeamDeathmatch.Matches
         }
 
         private delegate void Reviving(Player player, ref bool cancel);
-        private static event Reviving OnReviving;
+        private static event Reviving? OnReviving;
 
         // ReSharper disable InconsistentNaming, UnusedType.Local, UnusedMember.Local
         [HarmonyPatch]

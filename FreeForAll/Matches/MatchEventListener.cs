@@ -33,7 +33,7 @@ namespace FreeForAll.Matches
             return matchPlayer != null;
         }
 
-        public async Task HandleEventAsync(object sender, UnturnedPlayerDeathEvent @event)
+        public async Task HandleEventAsync(object? sender, UnturnedPlayerDeathEvent @event)
         {
             if (!IsInActiveMatch(@event.Player)) return;
 
