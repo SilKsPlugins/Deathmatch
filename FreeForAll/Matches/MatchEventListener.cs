@@ -1,5 +1,7 @@
 ﻿using Cysharp.Threading.Tasks;
 using Deathmatch.API.Matches;
+using Deathmatch.Core.Players.Extensions;
+using JetBrains.Annotations;
 using Microsoft.Extensions.Configuration;
 using OpenMod.API.Eventing;
 using OpenMod.Unturned.Players;
@@ -8,6 +10,7 @@ using System.Threading.Tasks;
 
 namespace FreeForAll.Matches
 {
+    [UsedImplicitly]
     public class MatchEventListener : IEventListener<UnturnedPlayerDeathEvent>
     {
         private readonly IMatchExecutor _matchExecutor;
@@ -35,30 +38,36 @@ namespace FreeForAll.Matches
 
         public async Task HandleEventAsync(object? sender, UnturnedPlayerDeathEvent @event)
         {
-            if (!IsInActiveMatch(@event.Player)) return;
+            if (!IsInActiveMatch(@event.Player))
+            {
+                return;
+            }
 
-            if (!_configuration.GetValue("AutoRespawn:Enabled", false)) return;
+            if (!_configuration.GetValue("AutoRespawn:Enabled", false))
+            {
+                return;
+            }
 
             var delayConfig = _configuration.GetValue<double>("AutoRespawn:Delay", 0);
 
             async UniTask AutoRespawnPlayer(UnturnedPlayer player, double delay)
             {
-                await UniTask.SwitchToMainThread();
-
                 if (delay > 0)
                 {
                     await UniTask.Delay((int)(delay * 1000));
                 }
 
+                await UniTask.SwitchToMainThread();
+
                 if (IsInActiveMatch(player) && !player.IsAlive)
                 {
-                    player.Player.life.askRespawn(player.SteamId, false);
+                    player.ForceRespawn();
                 }
             }
 
             if (delayConfig > 0)
             {
-                AutoRespawnPlayer(@event.Player, delayConfig).Forget();
+                UniTask.RunOnThreadPool(() => AutoRespawnPlayer(@event.Player, delayConfig)).Forget();
             }
             else
             {
