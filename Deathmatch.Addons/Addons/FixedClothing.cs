@@ -1,11 +1,12 @@
-﻿using Deathmatch.API.Players;
+﻿using Cysharp.Threading.Tasks;
+using Deathmatch.API.Players;
 using OpenMod.Unturned.Players.Clothing.Events;
-using System.Threading.Tasks;
+using SilK.Unturned.Extras.Events;
 
 namespace Deathmatch.Addons.Addons
 {
     public class FixedClothing : IAddon,
-        IAddonEventListener<UnturnedPlayerClothingUnequippingEvent>
+        IInstanceEventListener<UnturnedPlayerClothingUnequippingEvent>
     {
         private readonly IGamePlayerManager _playerManager;
 
@@ -24,14 +25,14 @@ namespace Deathmatch.Addons.Addons
         {
         }
 
-        public Task HandleEventAsync(object sender, UnturnedPlayerClothingUnequippingEvent @event)
+        public UniTask HandleEventAsync(object sender, UnturnedPlayerClothingUnequippingEvent @event)
         {
             var player = _playerManager.GetPlayer(@event.Player);
 
             if (player.IsInActiveMatch())
                 @event.IsCancelled = true;
 
-            return Task.CompletedTask;
+            return UniTask.CompletedTask;
         }
     }
 }

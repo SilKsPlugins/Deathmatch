@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 namespace Deathmatch.Addons.Addons
 {
     public class AutoJoinAddon : IAddon,
-        IAddonEventListener<IGamePlayerConnectedEvent>
+        IInstanceEventListener<IGamePlayerConnectedEvent>
     {
         private readonly IGamePlayerManager _playerManager;
         private readonly IMatchExecutor _matchExecutor;
@@ -35,7 +35,7 @@ namespace Deathmatch.Addons.Addons
         {
         }
 
-        public async Task HandleEventAsync(object sender, IGamePlayerConnectedEvent @event)
+        public async UniTask HandleEventAsync(object sender, IGamePlayerConnectedEvent @event)
         {
             await _matchExecutor.AddParticipant(@event.Player);
         }
