@@ -1,11 +1,16 @@
-﻿using Deathmatch.API.Players;
+﻿using Cysharp.Threading.Tasks;
+using Deathmatch.API.Players;
 using HarmonyLib;
+using JetBrains.Annotations;
 using SDG.Unturned;
 
 namespace Deathmatch.Addons.Addons
 {
-    public class NoDeathDropsAddon : IAddon
+    [UsedImplicitly]
+    public class NoDeathDropsAddon : AddonBase
     {
+        public override string Title => "NoDeathDrops";
+
         private readonly IGamePlayerManager _playerManager;
 
         public NoDeathDropsAddon(IGamePlayerManager playerManager)
@@ -13,18 +18,20 @@ namespace Deathmatch.Addons.Addons
             _playerManager = playerManager;
         }
 
-        public string Title => "NoDeathDrops";
-
-        public void Load()
+        protected override UniTask OnLoadAsync()
         {
             OnDeathDropInventory += Events_OnDeathDropInventory;
             OnDeathDropClothing += Events_OnDeathDropClothing;
+
+            return UniTask.CompletedTask;
         }
 
-        public void Unload()
+        protected override UniTask OnUnloadAsync()
         {
-            // ReSharper disable once DelegateSubtraction
             OnDeathDropInventory -= Events_OnDeathDropInventory;
+            OnDeathDropClothing -= Events_OnDeathDropClothing;
+
+            return UniTask.CompletedTask;
         }
 
         private void Events_OnDeathDropInventory(Player nativePlayer)
@@ -49,8 +56,8 @@ namespace Deathmatch.Addons.Addons
 
         public delegate void DeathDrop(Player player);
 
-        public static DeathDrop OnDeathDropClothing;
-        public static DeathDrop OnDeathDropInventory;
+        public static DeathDrop? OnDeathDropClothing;
+        public static DeathDrop? OnDeathDropInventory;
 
         [HarmonyPatch]
         private class Patches
@@ -60,7 +67,9 @@ namespace Deathmatch.Addons.Addons
             private static void OnLifeUpdated_Clothing(PlayerClothing __instance, bool isDead)
             {
                 if (isDead)
+                {
                     OnDeathDropClothing?.Invoke(__instance.player);
+                }
             }
 
             [HarmonyPatch(typeof(PlayerInventory), "onLifeUpdated")]
@@ -68,7 +77,9 @@ namespace Deathmatch.Addons.Addons
             private static void OnLifeUpdated_Inventory(PlayerInventory __instance, bool isDead)
             {
                 if (isDead)
+                {
                     OnDeathDropInventory?.Invoke(__instance.player);
+                }
             }
         }
     }

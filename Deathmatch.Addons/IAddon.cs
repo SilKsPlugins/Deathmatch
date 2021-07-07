@@ -1,10 +1,12 @@
-﻿namespace Deathmatch.Addons
+﻿using Cysharp.Threading.Tasks;
+
+namespace Deathmatch.Addons
 {
     public interface IAddon
     {
         string Title { get; }
 
-        void Load();
-        void Unload();
+        UniTask LoadAsync();
+        UniTask UnloadAsync();
     }
 }

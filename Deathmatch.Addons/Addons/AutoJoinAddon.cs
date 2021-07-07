@@ -1,41 +1,37 @@
-﻿using Deathmatch.API.Matches;
+﻿using Cysharp.Threading.Tasks;
+using Deathmatch.API.Matches;
 using Deathmatch.API.Players;
 using Deathmatch.API.Players.Events;
-using OpenMod.Core.Helpers;
-using System.Threading.Tasks;
+using JetBrains.Annotations;
+using SilK.Unturned.Extras.Events;
 
 namespace Deathmatch.Addons.Addons
 {
-    public class AutoJoinAddon : IAddon,
+    [UsedImplicitly]
+    public class AutoJoinAddon : AddonBase,
         IInstanceEventListener<IGamePlayerConnectedEvent>
     {
+        public override string Title => "AutoJoin";
+
         private readonly IGamePlayerManager _playerManager;
         private readonly IMatchExecutor _matchExecutor;
 
-        public AutoJoinAddon(IGamePlayerManager playerManager, IMatchExecutor matchExecutor)
+        public AutoJoinAddon(IGamePlayerManager playerManager,
+            IMatchExecutor matchExecutor)
         {
             _playerManager = playerManager;
             _matchExecutor = matchExecutor;
         }
 
-        public string Title => "AutoJoin";
-
-        public void Load()
+        protected override async UniTask OnLoadAsync()
         {
-            AsyncHelper.RunSync(async () =>
+            foreach (var player in _playerManager.GetPlayers())
             {
-                foreach (var player in _playerManager.GetPlayers())
-                {
-                    await _matchExecutor.AddParticipant(player);
-                }
-            });
+                await _matchExecutor.AddParticipant(player);
+            }
         }
 
-        public void Unload()
-        {
-        }
-
-        public async UniTask HandleEventAsync(object sender, IGamePlayerConnectedEvent @event)
+        public async UniTask HandleEventAsync(object? sender, IGamePlayerConnectedEvent @event)
         {
             await _matchExecutor.AddParticipant(@event.Player);
         }

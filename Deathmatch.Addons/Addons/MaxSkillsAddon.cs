@@ -1,15 +1,19 @@
 ﻿using Cysharp.Threading.Tasks;
 using Deathmatch.API.Players;
 using Deathmatch.API.Players.Events;
+using JetBrains.Annotations;
 using OpenMod.Unturned.Players.Life.Events;
 using SilK.Unturned.Extras.Events;
 
 namespace Deathmatch.Addons.Addons
 {
-    public class MaxSkillsAddon : IAddon,
+    [UsedImplicitly]
+    public class MaxSkillsAddon : AddonBase,
         IInstanceEventListener<UnturnedPlayerRevivedEvent>,
         IInstanceEventListener<IGamePlayerJoinedMatchEvent>
     {
+        public override string Title => "MaxSkills";
+
         private readonly IGamePlayerManager _playerManager;
 
         public MaxSkillsAddon(IGamePlayerManager playerManager)
@@ -17,9 +21,7 @@ namespace Deathmatch.Addons.Addons
             _playerManager = playerManager;
         }
 
-        public string Title => "MaxSkills";
-
-        public void Load()
+        protected override UniTask OnLoadAsync()
         {
             foreach (var player in _playerManager.GetPlayers())
             {
@@ -28,13 +30,11 @@ namespace Deathmatch.Addons.Addons
                     player.MaxSkills();
                 }
             }
+
+            return UniTask.CompletedTask;
         }
 
-        public void Unload()
-        {
-        }
-
-        public UniTask HandleEventAsync(object sender, UnturnedPlayerRevivedEvent @event)
+        public UniTask HandleEventAsync(object? sender, UnturnedPlayerRevivedEvent @event)
         {
             var player = _playerManager.GetPlayer(@event.Player);
 
@@ -46,7 +46,7 @@ namespace Deathmatch.Addons.Addons
             return UniTask.CompletedTask;
         }
 
-        public UniTask HandleEventAsync(object sender, IGamePlayerJoinedMatchEvent @event)
+        public UniTask HandleEventAsync(object? sender, IGamePlayerJoinedMatchEvent @event)
         {
             @event.Player.MaxSkills();
 
