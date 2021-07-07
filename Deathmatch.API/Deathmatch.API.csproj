@@ -1,23 +1,18 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFramework>net461</TargetFramework>
-    <PackageLicenseExpression></PackageLicenseExpression>
-	<PackageTags>openmod openmod-plugin unturned</PackageTags>
-	<RootNamespace>Deathmatch.API</RootNamespace>
-    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
-    <GenerateNugetPackage>true</GenerateNugetPackage>
-    <Product>Deathmatch.API</Product>
-    <Authors>SilK</Authors>
-    <Company>SilK's Plugins</Company>
-  </PropertyGroup>
+	<PropertyGroup>
+		<TargetFramework>net461</TargetFramework>
+		<Version>0.0.0</Version>
+	</PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net461" Version="1.0.2">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-    <PackageReference Include="OpenMod.Unturned" Version="3.1.2" />
-  </ItemGroup>
+	<Import Project="$(MSBuildProjectDirectory)\..\props\SharedProjectProps.props" />
+
+	<ItemGroup>
+		<PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net461" Version="1.0.2">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+		<PackageReference Include="OpenMod.Unturned" Version="3.1.2" />
+	</ItemGroup>
 
 </Project>

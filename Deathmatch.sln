@@ -9,9 +9,14 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Deathmatch.Core", "Deathmat
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TeamDeathmatch", "TeamDeathmatch\TeamDeathmatch.csproj", "{57CCD564-1574-4F48-B441-1F9468CB0269}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FreeForAll", "FreeForAll\FreeForAll.csproj", "{A598A97F-45DD-483D-AFA5-F0AF8D1D9F7D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FreeForAll", "FreeForAll\FreeForAll.csproj", "{A598A97F-45DD-483D-AFA5-F0AF8D1D9F7D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Deathmatch.Addons", "Deathmatch.Addons\Deathmatch.Addons.csproj", "{8C79971D-70FC-4811-8C48-DA137142E02B}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Deathmatch.Addons", "Deathmatch.Addons\Deathmatch.Addons.csproj", "{8C79971D-70FC-4811-8C48-DA137142E02B}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "props", "props", "{9C1FC73F-71C2-40B8-95A8-178D0072C678}"
+	ProjectSection(SolutionItems) = preProject
+		props\SharedProjectProps.props = props\SharedProjectProps.props
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

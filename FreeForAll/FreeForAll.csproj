@@ -2,34 +2,28 @@
 
 	<PropertyGroup>
 		<TargetFramework>net461</TargetFramework>
-		<PackageLicenseExpression></PackageLicenseExpression>
-		<PackageTags>openmod openmod-plugin unturned</PackageTags>
-		<RootNamespace>FreeForAll</RootNamespace>
-		<GeneratePackageOnBuild>false</GeneratePackageOnBuild>
-		<GenerateNugetPackage>true</GenerateNugetPackage>
-		<Product>FreeForAll</Product>
-		<Authors>SilK</Authors>
-		<Company>SilK's Plugins</Company>
-		<LangVersion>8.0</LangVersion>
+		<Version>0.0.0</Version>
 	</PropertyGroup>
+
+	<Import Project="$(MSBuildProjectDirectory)\..\props\SharedProjectProps.props" />
 
 	<ItemGroup>
 		<PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net461" Version="1.0.2">
-		  <PrivateAssets>all</PrivateAssets>
-		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
 		<PackageReference Include="OpenMod.Unturned" Version="3.1.2" />
 		<PackageReference Include="SilK.Unturned.Extras" Version="1.6.5" />
 	</ItemGroup>
 
 	<ItemGroup>
-		<EmbeddedResource Include="config.yaml" />
-		<EmbeddedResource Include="translations.yaml" />
+		<ProjectReference Include="..\Deathmatch.API\Deathmatch.API.csproj" />
+		<ProjectReference Include="..\Deathmatch.Core\Deathmatch.Core.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\Deathmatch.API\Deathmatch.API.csproj" />
-		<ProjectReference Include="..\Deathmatch.Core\Deathmatch.Core.csproj" />
+		<EmbeddedResource Include="config.yaml" />
+		<EmbeddedResource Include="translations.yaml" />
 	</ItemGroup>
 
 </Project>

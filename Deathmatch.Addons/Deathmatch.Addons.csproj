@@ -2,24 +2,10 @@
 
 	<PropertyGroup>
 		<TargetFramework>net461</TargetFramework>
-		<AssemblyName>Deathmatch.Addons</AssemblyName>
-		<Product>$(AssemblyName)</Product>
-		<RootNamespace>$(AssemblyName)</RootNamespace>
 		<Version>0.0.0</Version>
 	</PropertyGroup>
 
-	<PropertyGroup>
-		<Authors>SilK</Authors>
-		<Company>SilK's Plugins</Company>
-		<Copyright>Copyright © SilK's Plugins 2021</Copyright>
-	</PropertyGroup>
-
-	<PropertyGroup>
-		<LangVersion>9.0</LangVersion>
-		<Nullable>enable</Nullable>
-		<WarningsAsErrors>nullable</WarningsAsErrors>
-		<NoWarn>$(NoWarn);NU1701;NU1702;CS0436</NoWarn>
-	</PropertyGroup>
+	<Import Project="$(MSBuildProjectDirectory)\..\props\SharedProjectProps.props" />
 
 	<ItemGroup>
 		<PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net461" Version="1.0.2">
@@ -37,13 +23,5 @@
 	<ItemGroup>
 		<EmbeddedResource Include="config.yaml" />
 	</ItemGroup>
-
-	<Target Name="ChangeAliasesOfNugetRefs" BeforeTargets="FindReferenceAssembliesForReferences;ResolveReferences">
-		<ItemGroup>
-			<ReferencePath Condition="'%(FileName)' == 'JetBrains.Annotations'">
-				<Aliases>JetBrainsAnnotations</Aliases>
-			</ReferencePath>
-		</ItemGroup>
-	</Target>
 
 </Project>

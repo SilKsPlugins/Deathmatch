@@ -1,0 +1,22 @@
+<Project>
+	<PropertyGroup>
+		<Authors>SilK</Authors>
+		<Company>SilK's Plugins</Company>
+		<Copyright>Copyright © SilK's Plugins 2021</Copyright>
+	</PropertyGroup>
+
+	<PropertyGroup>
+		<LangVersion>9.0</LangVersion>
+		<Nullable>enable</Nullable>
+		<WarningsAsErrors>nullable</WarningsAsErrors>
+		<NoWarn>$(NoWarn);NU1701;NU1702;CS0436</NoWarn>
+	</PropertyGroup>
+
+	<Target Name="ChangeAliasesOfNugetRefs" BeforeTargets="FindReferenceAssembliesForReferences;ResolveReferences">
+		<ItemGroup>
+			<ReferencePath Condition="'%(FileName)' == 'JetBrains.Annotations'">
+				<Aliases>JetBrainsAnnotations</Aliases>
+			</ReferencePath>
+		</ItemGroup>
+	</Target>
+</Project>
