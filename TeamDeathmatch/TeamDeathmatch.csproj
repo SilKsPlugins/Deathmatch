@@ -2,7 +2,6 @@
 
 	<PropertyGroup>
 		<TargetFramework>net461</TargetFramework>
-		<Version>0.0.0</Version>
 	</PropertyGroup>
 
 	<Import Project="$(MSBuildProjectDirectory)\..\props\SharedProjectProps.props" />
