@@ -1,35 +1,36 @@
-﻿using Deathmatch.API.Players;
+﻿using Cysharp.Threading.Tasks;
+using Deathmatch.API.Matches.Events;
+using Deathmatch.API.Players;
+using Deathmatch.API.Players.Events;
 using HarmonyLib;
+using JetBrains.Annotations;
 using Microsoft.Extensions.DependencyInjection;
-using OpenMod.API;
-using OpenMod.API.Eventing;
 using OpenMod.API.Ioc;
 using OpenMod.Unturned.Players.Life.Events;
 using SDG.Unturned;
+using SilK.Unturned.Extras.Events;
 using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 using UnityEngine;
 using Priority = OpenMod.API.Prioritization.Priority;
 
 namespace Deathmatch.Core.Grace
 {
     [ServiceImplementation(Lifetime = ServiceLifetime.Singleton, Priority = Priority.Lowest)]
-    public class GraceManager : IGraceManager, IDisposable
+    public class GraceManager : IGraceManager, IDisposable,
+        IInstanceEventListener<UnturnedPlayerDamagingEvent>,
+        IInstanceEventListener<IGamePlayerLeftMatchEvent>,
+        IInstanceEventListener<IMatchEndedEvent>
     {
         private readonly IGamePlayerManager _playerManager;
         private readonly Dictionary<IGamePlayer, float> _gracedPlayers;
 
-        public GraceManager(IGamePlayerManager playerManager,
-            IEventBus eventBus,
-            IRuntime runtime)
+        public GraceManager(IGamePlayerManager playerManager)
         {
             _playerManager = playerManager;
             _gracedPlayers = new Dictionary<IGamePlayer, float>();
 
             OnEquipmentInput += Events_OnEquipmentInput;
-
-            eventBus.Subscribe(runtime, (EventCallback<UnturnedPlayerDamagingEvent>)OnPlayerDamaging);
         }
 
         public void Dispose()
@@ -72,28 +73,48 @@ namespace Deathmatch.Core.Grace
         {
             var player = _playerManager.GetPlayer(nativePlayer);
 
-            if (WithinGracePeriod(player))
-                RevokeGracePeriod(player);
+            RevokeGracePeriod(player);
         }
 
-        public Task OnPlayerDamaging(IServiceProvider serviceProvider, object? sender, UnturnedPlayerDamagingEvent @event)
+        public UniTask HandleEventAsync(object? sender, UnturnedPlayerDamagingEvent @event)
         {
             var player = _playerManager.GetPlayer(@event.Player);
 
             if (WithinGracePeriod(player))
+            {
                 @event.IsCancelled = true;
+            }
 
-            return Task.CompletedTask;
+            return UniTask.CompletedTask;
+        }
+
+        public UniTask HandleEventAsync(object? sender, IGamePlayerLeftMatchEvent @event)
+        {
+            RevokeGracePeriod(@event.Player);
+
+            return UniTask.CompletedTask;
+        }
+
+        public UniTask HandleEventAsync(object? sender, IMatchEndedEvent @event)
+        {
+            foreach (var player in @event.Match.GetPlayers())
+            {
+                RevokeGracePeriod(player);
+            }
+
+            return UniTask.CompletedTask;
         }
 
         private delegate void EquipmentInput(Player player, bool inputPrimary, bool inputSecondary);
         private static event EquipmentInput? OnEquipmentInput;
 
+        [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
         [HarmonyPatch]
         private class Patches
         {
             [HarmonyPatch(typeof(PlayerEquipment), "simulate")]
             [HarmonyPrefix]
+            // ReSharper disable once InconsistentNaming
             private static void Simulate(PlayerEquipment __instance, bool inputPrimary, bool inputSecondary)
             {
                 OnEquipmentInput?.Invoke(__instance.player, inputPrimary, inputSecondary);
