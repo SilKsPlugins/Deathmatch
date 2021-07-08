@@ -1,11 +1,15 @@
-﻿using Deathmatch.API.Loadouts;
+﻿using Cysharp.Threading.Tasks;
+using Deathmatch.API.Loadouts;
 using Deathmatch.API.Players;
+using Deathmatch.API.Players.Events;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OpenMod.API.Ioc;
 using OpenMod.API.Prioritization;
 using OpenMod.API.Users;
 using OpenMod.Common.Helpers;
+using OpenMod.Core.Helpers;
+using SilK.Unturned.Extras.Events;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,7 +18,9 @@ using System.Threading.Tasks;
 namespace Deathmatch.Core.Loadouts
 {
     [ServiceImplementation(Lifetime = ServiceLifetime.Singleton, Priority = Priority.Lowest)]
-    public sealed class LoadoutSelector : ILoadoutSelector
+    public sealed class LoadoutSelector : ILoadoutSelector,
+        IInstanceEventListener<IGamePlayerConnectedEvent>,
+        IInstanceEventListener<IGamePlayerDisconnectedEvent>
     {
         private readonly ILoadoutManager _loadoutManager;
         private readonly IUserDataStore _userDataStore;
@@ -24,6 +30,7 @@ namespace Deathmatch.Core.Loadouts
 
         public LoadoutSelector(ILoadoutManager loadoutManager,
             IUserDataStore userDataStore,
+            IGamePlayerManager playerManager,
             ILogger<LoadoutSelector> logger)
         {
             _loadoutManager = loadoutManager;
@@ -31,6 +38,16 @@ namespace Deathmatch.Core.Loadouts
             _logger = logger;
 
             _loadoutSelections = new Dictionary<IGamePlayer, List<LoadoutSelection>>();
+
+            AsyncHelper.RunSync(async () =>
+            {
+                var existingPlayers = playerManager.GetPlayers();
+
+                foreach (var user in existingPlayers)
+                {
+                    await LoadPlayer(user);
+                }
+            });
         }
 
         public ILoadout? GetLoadout(IGamePlayer player, string category)
@@ -81,7 +98,7 @@ namespace Deathmatch.Core.Loadouts
 
         private const string LoadoutSelectionsKey = "LoadoutSelections";
 
-        internal async Task LoadPlayer(IGamePlayer player)
+        private async Task LoadPlayer(IGamePlayer player)
         {
             var userData =
                 await _userDataStore.GetUserDataAsync<object>(player.User.Id, player.User.Type,
@@ -118,7 +135,7 @@ namespace Deathmatch.Core.Loadouts
             }
         }
 
-        internal async Task SavePlayer(IGamePlayer player)
+        private async Task SavePlayer(IGamePlayer player)
         {
             if (_loadoutSelections.ContainsKey(player))
             {
@@ -127,6 +144,16 @@ namespace Deathmatch.Core.Loadouts
 
                 _loadoutSelections.Remove(player);
             }
+        }
+
+        public async UniTask HandleEventAsync(object? sender, IGamePlayerConnectedEvent @event)
+        {
+            await LoadPlayer(@event.Player);
+        }
+
+        public async UniTask HandleEventAsync(object? sender, IGamePlayerDisconnectedEvent @event)
+        {
+            await SavePlayer(@event.Player);
         }
     }
 }
