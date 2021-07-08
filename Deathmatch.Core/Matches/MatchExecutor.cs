@@ -272,6 +272,10 @@ namespace Deathmatch.Core.Matches
                 player.CurrentMatch = null;
             }
 
+            // Unsubscribe events
+
+            _matchEventSubscriptionDisposer?.Dispose();
+
             // Emit MatchEndedEvent
 
             var endedEvent = new MatchEndedEvent(CurrentMatch);
