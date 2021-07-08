@@ -2,6 +2,7 @@
 using Deathmatch.API.Loadouts;
 using Deathmatch.API.Matches;
 using Deathmatch.API.Players;
+using Deathmatch.API.Players.Events;
 using Deathmatch.Core.Grace;
 using Deathmatch.Core.Helpers;
 using Deathmatch.Core.Items;
@@ -9,15 +10,14 @@ using Deathmatch.Core.Loadouts;
 using Deathmatch.Core.Matches;
 using Deathmatch.Core.Spawns;
 using FreeForAll.Players;
-using HarmonyLib;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using OpenMod.API.Permissions;
 using OpenMod.API.Plugins;
-using OpenMod.Core.Helpers;
 using OpenMod.Core.Users;
+using OpenMod.UnityEngine.Extensions;
 using OpenMod.Unturned.Players.Life.Events;
-using SDG.Unturned;
+using SilK.Unturned.Extras.Events;
 using SilK.Unturned.Extras.Plugins;
 using System;
 using System.Collections.Generic;
@@ -33,7 +33,8 @@ namespace FreeForAll.Matches
     [MatchDescription("A game mode where the first to the kill threshold wins.")]
     [MatchAlias("FFA")]
     public class MatchFFA : MatchBase,
-        IMatchEventListener<UnturnedPlayerDeathEvent>
+        IInstanceEventListener<UnturnedPlayerDeathEvent>,
+        IInstanceEventListener<IGamePlayerSelectingRespawnEvent>
     {
         private readonly IPluginAccessor<FreeForAllPlugin> _pluginAccessor;
         private readonly ILogger<MatchFFA> _logger;
@@ -193,8 +194,6 @@ namespace FreeForAll.Matches
             IsRunning = true;
             HasRun = true;
 
-            OnReviving += Events_OnReviving;
-
             int spawnIndex = 0;
 
             await UniTask.SwitchToMainThread();
@@ -233,8 +232,6 @@ namespace FreeForAll.Matches
             if (!IsRunning) return false;
 
             IsRunning = false;
-
-            OnReviving -= Events_OnReviving;
 
             _tokenSource?.Cancel();
 
@@ -315,28 +312,7 @@ namespace FreeForAll.Matches
             return true;
         }
 
-        private void Events_OnReviving(Player nativePlayer, ref bool cancel)
-        {
-            if (!IsRunning)
-            {
-                return;
-            }
-
-            var player = GetPlayer(nativePlayer);
-
-            if (player == null)
-            {
-                return;
-            }
-
-            cancel = true;
-
-            var spawn = GetFurthestSpawn();
-
-            AsyncHelper.RunSync(() => SpawnPlayer(player, spawn));
-        }
-
-        public async Task HandleEventAsync(object sender, UnturnedPlayerDeathEvent @event)
+        public async UniTask HandleEventAsync(object? sender, UnturnedPlayerDeathEvent @event)
         {
             var victim = GetPlayer(@event.Player);
 
@@ -364,24 +340,23 @@ namespace FreeForAll.Matches
             }
         }
 
-        private delegate void Reviving(Player player, ref bool cancel);
-        private static event Reviving? OnReviving;
-
-        // ReSharper disable InconsistentNaming, UnusedType.Local, UnusedMember.Local
-        [HarmonyPatch]
-        private static class Patches
+        /// <summary>
+        /// Handles spawn point selection for the game player.
+        /// </summary>
+        public UniTask HandleEventAsync(object? sender, IGamePlayerSelectingRespawnEvent @event)
         {
-            [HarmonyPatch(typeof(PlayerLife), "askRespawn")]
-            [HarmonyPrefix]
-            private static bool PreAskRespawn(PlayerLife __instance)
+            if (!IsRunning || @event.Player.CurrentMatch != this)
             {
-                var cancel = false;
-
-                OnReviving?.Invoke(__instance.player, ref cancel);
-
-                return !cancel;
+                return UniTask.CompletedTask;
             }
+
+            var spawn = GetFurthestSpawn();
+
+            @event.WantsToSpawnAtHome = false;
+            @event.Position = spawn.ToVector3().ToSystemVector();
+            @event.Yaw = spawn.Yaw;
+
+            return UniTask.CompletedTask;
         }
-        // ReSharper restore InconsistentNaming, UnusedType.Local, UnusedMember.Local
     }
 }
