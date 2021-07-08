@@ -1,5 +1,6 @@
 ﻿using OpenMod.API.Ioc;
 using System.Collections.Generic;
+using Deathmatch.API.Matches.Registrations;
 
 namespace Deathmatch.API.Matches
 {
@@ -9,8 +10,6 @@ namespace Deathmatch.API.Matches
         IReadOnlyCollection<IMatchProvider> MatchProviders { get; }
 
         IReadOnlyCollection<IMatchRegistration> GetMatchRegistrations();
-        IReadOnlyCollection<IMatchRegistration> GetEnabledMatchRegistrations();
-        IMatchRegistration? GetMatchRegistration(string title);
 
         void AddMatchProvider(IMatchProvider provider);
         void RemoveMatchProvider(IMatchProvider provider);

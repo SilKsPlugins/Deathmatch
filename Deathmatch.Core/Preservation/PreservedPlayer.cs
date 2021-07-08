@@ -36,6 +36,8 @@ namespace Deathmatch.Core.Preservation
         {
             Player = player;
 
+            Player.Player.save();
+
             if (player.IsDead)
             {
                 Player.ForceRespawn();
@@ -54,8 +56,6 @@ namespace Deathmatch.Core.Preservation
             _life = new PreservedLife(Player.Life);
 
             _group = new PreservedGroup(Player.Quests);
-
-            Player.Player.save();
         }
 
         public void Restore()

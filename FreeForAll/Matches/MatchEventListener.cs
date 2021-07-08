@@ -1,5 +1,6 @@
 ﻿using Cysharp.Threading.Tasks;
 using Deathmatch.API.Matches;
+using Deathmatch.Core.Matches.Extensions;
 using Deathmatch.Core.Players.Extensions;
 using JetBrains.Annotations;
 using Microsoft.Extensions.Configuration;
@@ -27,11 +28,17 @@ namespace FreeForAll.Matches
         {
             var match = _matchExecutor.CurrentMatch;
 
-            if (match == null || !match.IsRunning) return false;
+            if (match == null || match.Status != MatchStatus.InProgress)
+            {
+                return false;
+            }
 
-            if (!(match is MatchFFA ffaMatch)) return false;
+            if (match is not MatchFFA)
+            {
+                return false;
+            }
 
-            var matchPlayer = ffaMatch.GetPlayer(player);
+            var matchPlayer = match.GetPlayer(player);
 
             return matchPlayer != null;
         }

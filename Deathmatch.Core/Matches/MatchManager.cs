@@ -1,9 +1,9 @@
 ﻿using Deathmatch.API.Matches;
+using Deathmatch.API.Matches.Registrations;
 using Microsoft.Extensions.DependencyInjection;
 using OpenMod.API.Ioc;
 using OpenMod.API.Prioritization;
 using OpenMod.Core.Prioritization;
-using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -27,36 +27,6 @@ namespace Deathmatch.Core.Matches
         {
             return MatchProviders.SelectMany(x => x.GetMatchRegistrations()).OrderBy(x => x.Priority, _priorityComparer)
                 .ToList().AsReadOnly();
-        }
-
-        public IReadOnlyCollection<IMatchRegistration> GetEnabledMatchRegistrations()
-        {
-            return MatchProviders.SelectMany(x => x.GetMatchRegistrations()).Where(x => x.Enabled)
-                .OrderBy(x => x.Priority, _priorityComparer).ToList().AsReadOnly();
-        }
-
-        public IMatchRegistration? GetMatchRegistration(string title)
-        {
-            var registrations = GetEnabledMatchRegistrations();
-
-            IMatchRegistration? titleMatch = null;
-            IMatchRegistration? aliasMatch = null;
-
-            foreach (var registration in registrations)
-            {
-                if (title.Equals(registration.Title, StringComparison.OrdinalIgnoreCase))
-                {
-                    titleMatch = registration;
-                    break;
-                }
-
-                if (registration.Aliases.Any(x => title.Equals(x, StringComparison.OrdinalIgnoreCase)))
-                {
-                    aliasMatch = registration;
-                }
-            }
-
-            return titleMatch ?? aliasMatch;
         }
 
         public void AddMatchProvider(IMatchProvider provider)

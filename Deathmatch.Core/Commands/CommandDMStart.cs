@@ -5,6 +5,7 @@ using Microsoft.Extensions.Localization;
 using OpenMod.Core.Commands;
 using OpenMod.Unturned.Commands;
 using System;
+using Deathmatch.Core.Matches.Extensions;
 
 namespace Deathmatch.Core.Commands
 {

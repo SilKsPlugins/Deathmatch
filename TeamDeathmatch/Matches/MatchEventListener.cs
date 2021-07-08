@@ -1,5 +1,6 @@
 ﻿using Cysharp.Threading.Tasks;
 using Deathmatch.API.Matches;
+using Deathmatch.Core.Matches.Extensions;
 using Deathmatch.Core.Players.Extensions;
 using Microsoft.Extensions.Configuration;
 using OpenMod.API.Eventing;
@@ -25,11 +26,17 @@ namespace TeamDeathmatch.Matches
         {
             var match = _matchExecutor.CurrentMatch;
 
-            if (match == null || !match.IsRunning) return false;
+            if (match == null || match.Status != MatchStatus.InProgress)
+            {
+                return false;
+            }
 
-            if (!(match is MatchTDM tdmMatch)) return false;
+            if (match is not MatchTDM)
+            {
+                return false;
+            }
 
-            var matchPlayer = tdmMatch.GetPlayer(player);
+            var matchPlayer = match.GetPlayer(player);
 
             return matchPlayer != null;
         }

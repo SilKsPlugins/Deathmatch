@@ -1,10 +1,11 @@
-﻿using Deathmatch.API.Matches;
+﻿using Deathmatch.API.Matches.Registrations;
 using OpenMod.API.Prioritization;
 using System;
 using System.Collections.Generic;
 
-namespace Deathmatch.Core.Matches
+namespace Deathmatch.Core.Matches.Registrations
 {
+    [Serializable]
     public class RegisteredMatchInfo
     {
         public string Id { get; set; }
@@ -42,7 +43,9 @@ namespace Deathmatch.Core.Matches
         public void ApplyTo(IMatchRegistration registration)
         {
             if (registration.Id != Id)
+            {
                 throw new Exception("Cannot apply info to non-matching registration");
+            }
 
             registration.Enabled = Enabled;
             registration.Priority = Priority;

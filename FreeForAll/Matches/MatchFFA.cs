@@ -8,10 +8,13 @@ using Deathmatch.Core.Helpers;
 using Deathmatch.Core.Items;
 using Deathmatch.Core.Loadouts;
 using Deathmatch.Core.Matches;
+using Deathmatch.Core.Matches.Extensions;
 using Deathmatch.Core.Spawns;
 using FreeForAll.Players;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using MoreLinq;
+using OpenMod.API.Commands;
 using OpenMod.API.Permissions;
 using OpenMod.API.Plugins;
 using OpenMod.Core.Users;
@@ -22,10 +25,7 @@ using SilK.Unturned.Extras.Plugins;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using UnityEngine;
-using Color = System.Drawing.Color;
 
 namespace FreeForAll.Matches
 {
@@ -43,9 +43,8 @@ namespace FreeForAll.Matches
         private readonly IPermissionChecker _permissionChecker;
         private readonly IGraceManager _graceManager;
 
-        private CancellationTokenSource _tokenSource;
-
-        public MatchFFA(IPluginAccessor<FreeForAllPlugin> pluginAccessor,
+        public MatchFFA(
+            IPluginAccessor<FreeForAllPlugin> pluginAccessor,
             ILogger<MatchFFA> logger,
             ILoadoutManager loadoutManager,
             ILoadoutSelector loadoutSelector,
@@ -59,8 +58,6 @@ namespace FreeForAll.Matches
             _loadoutSelector = loadoutSelector;
             _permissionChecker = permissionChecker;
             _graceManager = graceManager;
-
-            _tokenSource = new CancellationTokenSource();
         }
 
         public IReadOnlyCollection<PlayerSpawn> GetSpawns() => _pluginAccessor.Instance?.Spawns ??
@@ -69,35 +66,22 @@ namespace FreeForAll.Matches
 
         public PlayerSpawn GetFurthestSpawn()
         {
-            var enemyPoints = GetPlayers().Where(x => !x.IsDead).Select(x => x.Transform.position).ToList();
+            var enemyPoints = Players.Where(x => !x.IsDead).Select(x => x.Transform.position).ToList();
 
             static float TotalMagnitude(Vector3 point, IEnumerable<Vector3> others)
             {
                 return others.Sum(other => (other - point).sqrMagnitude);
             }
 
-            var spawns = GetSpawns().ToList().Shuffle();
+            var bestSpawn = GetSpawns()
+                .Shuffle(Rng)
+                .MaxBy(x => TotalMagnitude(x.ToVector3(), enemyPoints))
+                .FirstOrDefault();
 
-            PlayerSpawn? best = null;
-            var bestDist = 0f;
-
-            foreach (var spawn in spawns)
-            {
-                var dist = TotalMagnitude(spawn.ToVector3(), enemyPoints);
-
-                if (dist < bestDist)
-                {
-                    continue;
-                }
-
-                best = spawn;
-                bestDist = dist;
-            }
-
-            return best ?? throw new Exception("No spawns configured. Cannot spawn player.");
+            return bestSpawn ?? throw new Exception("No spawns configured. Cannot spawn player.");
         }
 
-        public async Task<ILoadout?> GetLoadout(IGamePlayer player)
+        public async UniTask<ILoadout?> GetLoadout(IGamePlayer player)
         {
             const string category = "Free For All";
 
@@ -112,8 +96,10 @@ namespace FreeForAll.Matches
             return await _loadoutManager.GetRandomLoadout(category, player, _permissionChecker);
         }
 
-        public async Task GiveLoadout(IGamePlayer player)
+        public async UniTask GiveLoadout(IGamePlayer player)
         {
+            await UniTask.SwitchToMainThread();
+
             var loadout = await GetLoadout(player);
 
             if (loadout == null)
@@ -127,8 +113,10 @@ namespace FreeForAll.Matches
             }
         }
 
-        public async Task SpawnPlayer(IGamePlayer player, PlayerSpawn spawn)
+        public async UniTask SpawnPlayer(IGamePlayer player, PlayerSpawn spawn)
         {
+            await UniTask.SwitchToMainThread();
+
             spawn.SpawnPlayer(player);
 
             player.Heal();
@@ -138,63 +126,35 @@ namespace FreeForAll.Matches
             _graceManager.GrantGracePeriod(player, Configuration.GetValue<float>("GracePeriod", 2));
         }
 
-        public override async UniTask AddPlayer(IGamePlayer player)
+        protected override async UniTask OnPlayerAdded(IGamePlayer player)
         {
             await UniTask.SwitchToMainThread();
 
-            if (GetPlayer(player) != null) return;
-
-            Players.Add(player);
-
-            if (!IsRunning) return;
+            await PreservationManager.PreservePlayer(player);
 
             var spawn = GetFurthestSpawn();
-
-            await PreservationManager.PreservePlayer(player);
 
             await SpawnPlayer(player, spawn);
         }
 
-        public override async UniTask AddPlayers(IEnumerable<IGamePlayer> players)
+        protected override async UniTask OnPlayerRemoved(IGamePlayer player)
         {
             await UniTask.SwitchToMainThread();
-
-            foreach (var player in players)
-            {
-                await AddPlayer(player);
-            }
-        }
-
-        public override async UniTask RemovePlayer(IGamePlayer player)
-        {
-            await UniTask.SwitchToMainThread();
-
-            if (GetPlayer(player) == null) return;
-
-            Players.Remove(player);
 
             // Always restore, just in case
             await PreservationManager.RestorePlayer(player);
         }
 
-        public override async UniTask<bool> StartMatch()
+        protected override async UniTask OnStartAsync()
         {
-            if (IsRunning) return false;
-
             var spawns = GetSpawns().ToList().Shuffle();
 
             if (spawns.Count == 0)
             {
-                await UserManager.BroadcastAsync(KnownActorTypes.Player,
-                    StringLocalizer["errors:no_spawns"], Color.Red);
-
-                return false;
+                throw new UserFriendlyException(StringLocalizer["errors:no_spawns"]);
             }
 
-            IsRunning = true;
-            HasRun = true;
-
-            int spawnIndex = 0;
+            var spawnIndex = 0;
 
             await UniTask.SwitchToMainThread();
 
@@ -204,38 +164,15 @@ namespace FreeForAll.Matches
 
                 await SpawnPlayer(player, spawns[spawnIndex++]);
             }
-
-            _tokenSource = new CancellationTokenSource();
-
-            int maxDuration = Configuration.GetSection("MaxDuration").Get<int>();
-
-            if (maxDuration > 0)
-            {
-                async UniTask DelayedEnd(int delay)
-                {
-                    await UniTask.Delay(delay * 1000, cancellationToken: _tokenSource.Token);
-
-                    if (IsRunning)
-                    {
-                        await EndMatch();
-                    }
-                }
-
-                DelayedEnd(maxDuration).Forget();
-            }
-
-            return true;
+            
+            SetupDelayedEnd();
         }
 
-        public override async UniTask<bool> EndMatch()
+        protected override async UniTask OnEndAsync()
         {
-            if (!IsRunning) return false;
-
-            IsRunning = false;
-
-            _tokenSource?.Cancel();
-
             await UniTask.SwitchToMainThread();
+
+            var exceptions = new List<Exception>();
 
             foreach (var player in Players)
             {
@@ -246,8 +183,13 @@ namespace FreeForAll.Matches
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Error occurred restoring player.");
-                    throw;
+                    exceptions.Add(ex);
                 }
+            }
+
+            if (exceptions.Count > 0)
+            {
+                throw exceptions.First();
             }
 
             IGamePlayer? winner = null;
@@ -308,22 +250,36 @@ namespace FreeForAll.Matches
                     GiveRewards(player, allRewards);
                 }
             }
-
-            return true;
         }
 
-        public async UniTask HandleEventAsync(object? sender, UnturnedPlayerDeathEvent @event)
+        private void SetupDelayedEnd()
         {
-            var victim = GetPlayer(@event.Player);
+            var maxDuration = Configuration.GetValue("MaxDuration", 0f);
 
-            if (victim == null)
+            if (maxDuration <= 0)
             {
                 return;
             }
 
-            var killer = GetPlayer(@event.Instigator);
+            async UniTask DelayedEnd(float delay)
+            {
+                await UniTask.Delay((int)(delay * 1000), cancellationToken: CancellationToken);
 
-            if (killer == null || killer == victim)
+                await EndAsync();
+            }
+
+            UniTask.RunOnThreadPool(() => DelayedEnd(maxDuration)).Forget();
+        }
+
+        /// <summary>
+        /// Check win condition.
+        /// </summary>
+        public async UniTask HandleEventAsync(object? sender, UnturnedPlayerDeathEvent @event)
+        {
+            var victim = this.GetPlayer(@event.Player);
+            var killer = this.GetPlayer(@event.Instigator);
+
+            if (victim == null || killer == null || killer == victim)
             {
                 return;
             }
@@ -336,7 +292,7 @@ namespace FreeForAll.Matches
 
             if (kills >= threshold)
             {
-                await MatchExecutor.EndMatch();
+                await EndAsync();
             }
         }
 
@@ -345,7 +301,7 @@ namespace FreeForAll.Matches
         /// </summary>
         public UniTask HandleEventAsync(object? sender, IGamePlayerSelectingRespawnEvent @event)
         {
-            if (!IsRunning || @event.Player.CurrentMatch != this)
+            if (@event.Player.CurrentMatch != this || Status != MatchStatus.InProgress)
             {
                 return UniTask.CompletedTask;
             }

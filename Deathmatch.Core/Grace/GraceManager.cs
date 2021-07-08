@@ -97,7 +97,7 @@ namespace Deathmatch.Core.Grace
 
         public UniTask HandleEventAsync(object? sender, IMatchEndedEvent @event)
         {
-            foreach (var player in @event.Match.GetPlayers())
+            foreach (var player in @event.Match.Players)
             {
                 RevokeGracePeriod(player);
             }

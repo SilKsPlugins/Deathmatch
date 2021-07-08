@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using Deathmatch.API.Matches.Registrations;
+using System.Collections.Generic;
 
 namespace Deathmatch.API.Matches
 {

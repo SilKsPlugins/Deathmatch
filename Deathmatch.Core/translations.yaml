@@ -6,7 +6,7 @@ commands:
     not_found: "Failed to start match, the specified match does not exist."
   dmend:
     success: "Successfully ended match."
-    failure: "Failed to end match. There may be no match running."
+    failure: "Failed to end match: there is no match in progress."
   join:
     success: "Successfully joined the match/match pool."
     already: "You've already joined the match/match pool."

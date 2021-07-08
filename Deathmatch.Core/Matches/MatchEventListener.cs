@@ -51,8 +51,8 @@ namespace Deathmatch.Core.Matches
             {
                 var player = _playerManager.GetPlayer(user);
 
-                if (_matchExecutor.CurrentMatch != null && _matchExecutor.CurrentMatch.IsRunning &&
-                    _matchExecutor.CurrentMatch.GetPlayers().Contains(player))
+                if (_matchExecutor.CurrentMatch != null && _matchExecutor.CurrentMatch.Status == MatchStatus.InProgress &&
+                    _matchExecutor.CurrentMatch.Players.Contains(player))
                 {
                     bool IsEqual(string command, ICommandContext context)
                     {

@@ -1,5 +1,6 @@
 ﻿using Cysharp.Threading.Tasks;
 using Deathmatch.API.Loadouts;
+using Deathmatch.API.Matches;
 using Deathmatch.API.Players;
 using Deathmatch.API.Players.Events;
 using Deathmatch.Core.Grace;
@@ -7,12 +8,12 @@ using Deathmatch.Core.Helpers;
 using Deathmatch.Core.Items;
 using Deathmatch.Core.Loadouts;
 using Deathmatch.Core.Matches;
+using Deathmatch.Core.Matches.Extensions;
 using Deathmatch.Core.Spawns;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
+using OpenMod.API.Commands;
 using OpenMod.API.Permissions;
 using OpenMod.API.Plugins;
-using OpenMod.Core.Helpers;
 using OpenMod.Core.Users;
 using OpenMod.UnityEngine.Extensions;
 using OpenMod.Unturned.Players.Life.Events;
@@ -20,9 +21,7 @@ using SDG.Unturned;
 using SilK.Unturned.Extras.Events;
 using System;
 using System.Collections.Generic;
-using System.Drawing;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using TeamDeathmatch.Players;
 using TeamDeathmatch.Teams;
@@ -38,19 +37,21 @@ namespace TeamDeathmatch.Matches
         IInstanceEventListener<IGamePlayerSelectingRespawnEvent>
     {
         private readonly IPluginAccessor<TeamDeathmatchPlugin> _pluginAccessor;
-        private readonly ILogger<MatchTDM> _logger;
         private readonly ILoadoutManager _loadoutManager;
         private readonly ILoadoutSelector _loadoutSelector;
         private readonly IPermissionChecker _permissionChecker;
         private readonly IGraceManager _graceManager;
 
-        private CancellationTokenSource _tokenSource;
-
         private int _redDeaths;
         private int _blueDeaths;
 
+        private int _redInitialSpawnIndex;
+        private int _blueInitialSpawnIndex;
+
+        private readonly List<PlayerSpawn> _redInitialSpawns;
+        private readonly List<PlayerSpawn> _blueInitialSpawns;
+
         public MatchTDM(IPluginAccessor<TeamDeathmatchPlugin> pluginAccessor,
-            ILogger<MatchTDM> logger,
             ILoadoutManager loadoutManager,
             ILoadoutSelector loadoutSelector,
             IPermissionChecker permissionChecker,
@@ -58,16 +59,19 @@ namespace TeamDeathmatch.Matches
             IServiceProvider serviceProvider) : base(serviceProvider)
         {
             _pluginAccessor = pluginAccessor;
-            _logger = logger;
             _loadoutManager = loadoutManager;
             _loadoutSelector = loadoutSelector;
             _permissionChecker = permissionChecker;
             _graceManager = graceManager;
 
-            _tokenSource = new CancellationTokenSource();
-
             _redDeaths = 0;
             _blueDeaths = 0;
+
+            _redInitialSpawnIndex = 0;
+            _blueInitialSpawnIndex = 0;
+
+            _redInitialSpawns = new List<PlayerSpawn>();
+            _blueInitialSpawns = new List<PlayerSpawn>();
         }
 
         public IReadOnlyCollection<PlayerSpawn> GetSpawns(Team team)
@@ -97,8 +101,10 @@ namespace TeamDeathmatch.Matches
             return await _loadoutManager.GetRandomLoadout(category, player, _permissionChecker);
         }
 
-        public async Task GiveLoadout(IGamePlayer player)
+        public async UniTask GiveLoadout(IGamePlayer player)
         {
+            await UniTask.SwitchToMainThread();
+
             var loadout = await GetLoadout(player);
 
             if (loadout == null)
@@ -112,8 +118,10 @@ namespace TeamDeathmatch.Matches
             }
         }
 
-        public async Task SpawnPlayer(IGamePlayer player, PlayerSpawn spawn)
+        public async UniTask SpawnPlayer(IGamePlayer player, PlayerSpawn spawn)
         {
+            await UniTask.SwitchToMainThread();
+
             spawn.SpawnPlayer(player);
 
             player.Heal();
@@ -123,18 +131,16 @@ namespace TeamDeathmatch.Matches
             _graceManager.GrantGracePeriod(player, Configuration.GetValue<float>("GracePeriod", 2));
         }
 
-        public override async UniTask AddPlayer(IGamePlayer player)
+        protected override async UniTask OnPlayerAdded(IGamePlayer player)
         {
             await UniTask.SwitchToMainThread();
 
-            if (GetPlayer(player.SteamId) != null) return;
+            await PreservationManager.PreservePlayer(player);
 
-            Players.Add(player);
+            PlayerSpawn spawn;
 
-            if (!IsRunning) return;
-
-            int red = 0;
-            int blue = 0;
+            var red = 0;
+            var blue = 0;
 
             foreach (IGamePlayer otherPlayer in Players)
             {
@@ -149,133 +155,58 @@ namespace TeamDeathmatch.Matches
             else
                 player.SetTeam(Rng.NextDouble() < 0.5 ? Team.Red : Team.Blue);
 
-            var spawn = GetSpawns(player).RandomElement();
-
-            await PreservationManager.PreservePlayer(player);
+            if (Status == MatchStatus.Starting)
+            {
+                if (player.GetTeam() == Team.Red)
+                {
+                    _redInitialSpawnIndex = (_redInitialSpawnIndex + 1) % _redInitialSpawns.Count;
+                    spawn = _redInitialSpawns[_redInitialSpawnIndex];
+                }
+                else
+                {
+                    _blueInitialSpawnIndex = (_blueInitialSpawnIndex + 1) % _blueInitialSpawns.Count;
+                    spawn = _blueInitialSpawns[_blueInitialSpawnIndex];
+                }
+            }
+            else
+            {
+                spawn = GetSpawns(player).RandomElement();
+            }
 
             await SpawnPlayer(player, spawn);
         }
 
-        public override async UniTask AddPlayers(IEnumerable<IGamePlayer> players)
+        protected override async UniTask OnPlayerRemoved(IGamePlayer player)
         {
             await UniTask.SwitchToMainThread();
-
-            foreach (var player in players)
-            {
-                await AddPlayer(player);
-            }
-        }
-
-        public override async UniTask RemovePlayer(IGamePlayer player)
-        {
-            await UniTask.SwitchToMainThread();
-
-            if (GetPlayer(player) == null) return;
-
-            Players.Remove(player);
 
             // Always restore, just in case
             await PreservationManager.RestorePlayer(player);
         }
 
-        public override async UniTask<bool> StartMatch()
+        protected override UniTask OnStartAsync()
         {
-            if (IsRunning) return false;
-
             var redSpawns = GetSpawns(Team.Red).ToList().Shuffle();
             var blueSpawns = GetSpawns(Team.Blue).ToList().Shuffle();
 
             if (redSpawns.Count == 0 || blueSpawns.Count == 0)
             {
-                await UserManager.BroadcastAsync(KnownActorTypes.Player,
-                    StringLocalizer["errors:no_spawns"], Color.Red);
-
-                return false;
+                return UniTask.FromException(new UserFriendlyException(StringLocalizer["errors:no_spawns"]));
             }
 
-            IsRunning = true;
-            HasRun = true;
+            _redInitialSpawns.AddRange(redSpawns);
+            _blueInitialSpawns.AddRange(blueSpawns);
 
-            Team next = Rng.NextDouble() < 0.5 ? Team.Red : Team.Blue;
+            SetupDelayedEnd();
 
-            foreach (var player in Players.Shuffle())
-            {
-                player.SetTeam(next);
-
-                next = next == Team.Red ? Team.Blue : Team.Red;
-            }
-
-            int redSpawnIndex = 0;
-            int blueSpawnIndex = 0;
-
-            await UniTask.SwitchToMainThread();
-
-            foreach (var player in Players)
-            {
-                await PreservationManager.PreservePlayer(player);
-
-                PlayerSpawn spawn;
-
-                if (player.GetTeam() == Team.Red)
-                {
-                    spawn = redSpawns[redSpawnIndex++];
-                    redSpawnIndex %= redSpawns.Count;
-                }
-                else
-                {
-                    spawn = blueSpawns[blueSpawnIndex++];
-                    blueSpawnIndex %= blueSpawns.Count;
-                }
-
-                await SpawnPlayer(player, spawn);
-            }
-
-            _tokenSource = new CancellationTokenSource();
-
-            int maxDuration = Configuration.GetSection("MaxDuration").Get<int>();
-
-            if (maxDuration > 0)
-            {
-                async UniTask DelayedEnd(int delay)
-                {
-                    await UniTask.Delay(delay * 1000, cancellationToken: _tokenSource.Token);
-
-                    if (IsRunning)
-                    {
-                        await EndMatch();
-                    }
-                }
-
-                DelayedEnd(maxDuration).Forget();
-            }
-
-            return true;
+            return UniTask.CompletedTask;
         }
 
-        public override async UniTask<bool> EndMatch()
+        protected override async UniTask OnEndAsync()
         {
-            if (!IsRunning) return false;
-
-            IsRunning = false;
-
-            _tokenSource?.Cancel();
-
             await UniTask.SwitchToMainThread();
 
-            foreach (var player in Players)
-            {
-                try
-                {
-                    await PreservationManager.RestorePlayer(player);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Error occurred restoring player.");
-                    throw;
-                }
-            }
-
-            Team winner = Team.None;
+            var winner = Team.None;
 
             if (_redDeaths > _blueDeaths)
             {
@@ -319,23 +250,46 @@ namespace TeamDeathmatch.Matches
                 foreach (var player in Players)
                 {
                     if (winner == Team.None)
+                    {
                         GiveRewards(player, tiedRewards);
+                    }
                     else if (player.GetTeam() == winner)
+                    {
                         GiveRewards(player, winnerRewards);
+                    }
                     else
+                    {
                         GiveRewards(player, loserRewards);
+                    }
 
                     GiveRewards(player, allRewards);
                 }
             }
+        }
 
-            return true;
+        private void SetupDelayedEnd()
+        {
+            var maxDuration = Configuration.GetValue("MaxDuration", 0f);
+
+            if (maxDuration <= 0)
+            {
+                return;
+            }
+
+            async UniTask DelayedEnd(float delay)
+            {
+                await UniTask.Delay((int)(delay * 1000), cancellationToken: CancellationToken);
+
+                await EndAsync();
+            }
+
+            UniTask.RunOnThreadPool(() => DelayedEnd(maxDuration)).Forget();
         }
 
         public UniTask HandleEventAsync(object? sender, UnturnedPlayerDamagingEvent @event)
         {
-            var victim = GetPlayer(@event.Player);
-            var killer = GetPlayer(@event.Killer);
+            var victim = this.GetPlayer(@event.Player);
+            var killer = this.GetPlayer(@event.Killer);
 
             if (victim != null && killer != null && victim != killer
                 && victim.GetTeam() == killer.GetTeam()
@@ -349,13 +303,24 @@ namespace TeamDeathmatch.Matches
 
         public async UniTask HandleEventAsync(object? sender, UnturnedPlayerDeathEvent @event)
         {
-            var victim = GetPlayer(@event.Player);
+            var victim = this.GetPlayer(@event.Player);
 
-            if (victim == null) return;
+            if (victim == null)
+            {
+                return;
+            }
 
-            var killer = GetPlayer(@event.Instigator);
+            var killer = this.GetPlayer(@event.Instigator);
 
-            if (killer == null && @event.DeathCause != EDeathCause.BLEEDING) return;
+            if (killer == null && @event.DeathCause != EDeathCause.BLEEDING)
+            {
+                return;
+            }
+
+            if (victim == killer)
+            {
+                return;
+            }
 
             switch (victim.GetTeam())
             {
@@ -367,11 +332,11 @@ namespace TeamDeathmatch.Matches
                     break;
             }
 
-            int threshold = Configuration.GetValue("DeathThreshold", 30);
+            var threshold = Configuration.GetValue("DeathThreshold", 30);
 
             if (_redDeaths >= threshold || _blueDeaths >= threshold)
             {
-                await MatchExecutor.EndMatch();
+                await EndAsync();
             }
         }
 
@@ -380,7 +345,7 @@ namespace TeamDeathmatch.Matches
         /// </summary>
         public UniTask HandleEventAsync(object? sender, IGamePlayerSelectingRespawnEvent @event)
         {
-            if (!IsRunning || @event.Player.CurrentMatch != this)
+            if (@event.Player.CurrentMatch != this || Status != MatchStatus.InProgress)
             {
                 return UniTask.CompletedTask;
             }

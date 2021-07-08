@@ -1,73 +1,66 @@
 ﻿using Autofac;
 using Cysharp.Threading.Tasks;
 using Deathmatch.API.Matches;
+using Deathmatch.API.Matches.Events;
+using Deathmatch.API.Matches.Registrations;
 using Deathmatch.API.Players;
+using Deathmatch.Core.Helpers;
 using Deathmatch.Core.Matches.Events;
+using Deathmatch.Core.Matches.Extensions;
+using Deathmatch.Core.Matches.Registrations;
 using Deathmatch.Core.Players.Events;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
+using Nito.AsyncEx;
 using OpenMod.API;
 using OpenMod.API.Eventing;
 using OpenMod.API.Ioc;
 using OpenMod.API.Plugins;
 using OpenMod.API.Prioritization;
-using OpenMod.Core.Localization;
-using OpenMod.Core.Plugins;
+using OpenMod.Core.Ioc;
 using SilK.Unturned.Extras.Events;
+using SilK.Unturned.Extras.Localization;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 
 namespace Deathmatch.Core.Matches
 {
     [ServiceImplementation(Lifetime = ServiceLifetime.Singleton, Priority = Priority.Lowest)]
-    public class MatchExecutor : IMatchExecutor
+    public class MatchExecutor : IMatchExecutor,
+        IInstanceEventListener<IMatchEndedEvent>
     {
         public IMatch? CurrentMatch { get; private set; }
 
         private readonly IRuntime _runtime;
         private readonly IEventBus _eventBus;
         private readonly IMatchManager _matchManager;
-        private readonly IStringLocalizer _stringLocalizer;
-        private readonly IPluginAccessor<DeathmatchPlugin> _pluginAccessor;
         private readonly IPluginActivator _pluginActivator;
-        private readonly IEventSubscriber _eventSubscriber;
+        private readonly IStringLocalizerAccessor<DeathmatchPlugin> _stringLocalizer;
         private readonly ILogger<MatchExecutor> _logger;
-        private readonly IServiceProvider _serviceProvider;
-
-        private readonly Random _rng;
+        private readonly ILifetimeScope _lifetimeScope;
+        
         private readonly List<IGamePlayer> _participants;
-        private IDisposable? _matchEventSubscriptionDisposer;
+        private readonly AsyncLock _matchLock;
 
         public MatchExecutor(IRuntime runtime,
             IEventBus eventBus,
             IMatchManager matchManager,
-            IPluginAccessor<DeathmatchPlugin> pluginAccessor,
             IPluginActivator pluginActivator,
-            IStringLocalizerFactory stringLocalizerFactory,
-            IEventSubscriber eventSubscriber,
+            IStringLocalizerAccessor<DeathmatchPlugin> stringLocalizer,
             ILogger<MatchExecutor> logger,
-            IServiceProvider serviceProvider)
+            ILifetimeScope lifetimeScope)
         {
             _runtime = runtime;
             _eventBus = eventBus;
             _matchManager = matchManager;
-            _pluginAccessor = pluginAccessor;
             _pluginActivator = pluginActivator;
-            _eventSubscriber = eventSubscriber;
+            _stringLocalizer = stringLocalizer;
             _logger = logger;
-            _serviceProvider = serviceProvider;
-
-            string workingDir = PluginHelper.GetWorkingDirectory(_runtime, "Deathmatch.Core");
-
-            _stringLocalizer ??= Directory.Exists(workingDir)
-                ? _stringLocalizer = stringLocalizerFactory.Create("translations", workingDir)
-                : NullStringLocalizer.Instance;
-
-            _rng = new Random();
+            _lifetimeScope = lifetimeScope;
+            
             _participants = new List<IGamePlayer>();
+            _matchLock = new AsyncLock();
         }
 
         public IReadOnlyCollection<IGamePlayer> GetParticipants() => _participants.AsReadOnly();
@@ -82,7 +75,7 @@ namespace Deathmatch.Core.Matches
 
                 _participants.Add(player);
 
-                if (CurrentMatch != null && !CurrentMatch.GetPlayers().Contains(player))
+                if (CurrentMatch != null && !CurrentMatch.Players.Contains(player))
                 {
                     var preEvent = new GamePlayerJoiningMatchEvent(player, CurrentMatch);
                     await _eventBus.EmitAsync(_runtime, this, preEvent);
@@ -97,12 +90,12 @@ namespace Deathmatch.Core.Matches
                 }
                 else
                 {
-                    await player.PrintMessageAsync(_stringLocalizer["commands:join:success"]);
+                    await player.PrintMessageAsync(_stringLocalizer.GetInstance()["commands:join:success"]);
                 }
             }
             else
             {
-                await player.PrintMessageAsync(_stringLocalizer["commands:join:already"]);
+                await player.PrintMessageAsync(_stringLocalizer.GetInstance()["commands:join:already"]);
             }
         }
 
@@ -116,7 +109,7 @@ namespace Deathmatch.Core.Matches
 
                 _participants.Remove(player);
 
-                if (CurrentMatch != null && CurrentMatch.GetPlayers().Contains(player))
+                if (CurrentMatch != null && CurrentMatch.Players.Contains(player))
                 {
                     var preEvent = new GamePlayerLeavingMatchEvent(player, CurrentMatch);
                     await _eventBus.EmitAsync(_runtime, this, preEvent);
@@ -131,162 +124,115 @@ namespace Deathmatch.Core.Matches
                 }
                 else
                 {
-                    await player.PrintMessageAsync(_stringLocalizer["commands:leave:success"]);
+                    await player.PrintMessageAsync(_stringLocalizer.GetInstance()["commands:leave:success"]);
                 }
             }
             else
             {
-                await player.PrintMessageAsync(_stringLocalizer["commands:leave:already"]);
+                await player.PrintMessageAsync(_stringLocalizer.GetInstance()["commands:leave:already"]);
             }
         }
 
         public async UniTask<bool> StartMatch(IMatchRegistration? registration = null)
         {
-            if (CurrentMatch != null && CurrentMatch.IsRunning)
-            {
-                return false;
-            }
+            await UniTask.SwitchToThreadPool();
 
-            if (registration == null)
+            using (await _matchLock.LockAsync())
             {
-                var registrations = _matchManager.GetEnabledMatchRegistrations();
-
-                if (registrations.Count == 0)
+                if (CurrentMatch != null && CurrentMatch.Status != MatchStatus.Initialized)
                 {
                     return false;
                 }
 
-                registration = registrations.ElementAt(_rng.Next(registrations.Count));
-            }
+                await UniTask.SwitchToThreadPool();
 
-            var serviceProvider = _serviceProvider;
+                IMatch? match = null;
 
-            // Use the plugin's service provider
-            if (registration is RegisteredMatch match)
-            {
-                var plugin = _pluginActivator.ActivatedPlugins.FirstOrDefault(x =>
-                    x.GetType().Assembly == match.MatchType.Assembly);
-
-                if (plugin != null)
+                try
                 {
-                    serviceProvider = plugin.LifetimeScope.Resolve<IServiceProvider>();
+                    if (registration == null)
+                    {
+                        var registrations = _matchManager.GetEnabledMatchRegistrations();
+
+                        if (registrations.Count == 0)
+                        {
+                            return false;
+                        }
+
+                        registration = registrations.RandomElement();
+                    }
+
+                    var scope = _lifetimeScope;
+
+                    // Use the plugin's lifetime scope
+                    var plugin = _pluginActivator.ActivatedPlugins.FirstOrDefault(x =>
+                        x.GetType().Assembly == registration.Type.Assembly);
+
+                    if (plugin != null)
+                    {
+                        scope = plugin.LifetimeScope;
+                    }
+
+                    // Create scope
+
+                    var matchScope = scope.BeginLifetimeScopeEx(builder =>
+                    {
+                        builder.Register(_ => new MatchRegistrationAccessor(registration))
+                            .AsSelf()
+                            .As<IMatchRegistrationAccessor>();
+
+                        builder.RegisterType(registration.Type)
+                            .AsSelf()
+                            .As<IMatch>()
+                            .SingleInstance()
+                            .OwnedByLifetimeScope();
+                    });
+
+                    match = (IMatch?)matchScope.Resolve(registration.Type);
+                    
+                    if (match == null)
+                    {
+                        throw new Exception($"Unable to create instance of {registration.Type.Name}.");
+                    }
+
+                    // Emit MatchStartingEvent 
+
+                    var startingEvent = new MatchStartingEvent(match);
+
+                    await _eventBus.EmitAsync(_runtime, this, startingEvent);
+
+                    if (startingEvent.IsCancelled)
+                    {
+                        return false;
+                    }
+
+                    // Start match
+
+                    CurrentMatch = match;
+
+                    await CurrentMatch.StartAsync(_participants);
                 }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Exception occurred when attempting to start match");
+
+                    return false;
+                }
+
+                CurrentMatch = match;
+
+                return true;
             }
+        }
 
-            // Create instance
-
-            CurrentMatch = registration.Instantiate(serviceProvider);
-
-            if (CurrentMatch == null)
-            {
-                throw new Exception($"Unable to create instance of {nameof(IMatch)} with id {registration.Id}");
-            }
-
-            CurrentMatch.Registration = registration;
-
-            // Subscribe events
-
-            _matchEventSubscriptionDisposer = _eventSubscriber.Subscribe(CurrentMatch, _runtime);
-
-            // Emit MatchStartingEvent 
-
-            var startingEvent = new MatchStartingEvent(CurrentMatch);
-
-            await _eventBus.EmitAsync(_runtime, this, startingEvent);
-
-            if (startingEvent.IsCancelled)
-            {
-                return false;
-            }
-            
-            // Prepare players
-
-            foreach (IGamePlayer player in _participants)
-            {
-                player.ClearMatchData();
-
-                player.CurrentMatch = CurrentMatch;
-
-                await CurrentMatch.AddPlayer(player);
-            }
-
-            // Start match
-
-            var success = false;
-
-            try
-            {
-                success = await CurrentMatch.StartMatch();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Exception occurred when attempting to start match");
-            }
-
-            if (success)
-            {
-                // Emit MatchStartedEvent
-
-                var startedEvent = new MatchStartedEvent(CurrentMatch);
-
-                await _eventBus.EmitAsync(_runtime, this, startedEvent);
-            }
-            else
+        public UniTask HandleEventAsync(object? sender, IMatchEndedEvent @event)
+        {
+            if (@event.Match == CurrentMatch)
             {
                 CurrentMatch = null;
             }
 
-            return success;
-        }
-
-        public async UniTask<bool> EndMatch()
-        {
-            if (CurrentMatch == null || !CurrentMatch.IsRunning)
-            {
-                return false;
-            }
-
-            await UniTask.SwitchToMainThread();
-
-            var success = false;
-
-            try
-            {
-                success = await CurrentMatch.EndMatch();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Exception occurred when attempting to end match");
-            }
-
-            if (!success)
-            {
-                return false;
-            }
-
-            // Clean up players
-
-            foreach (var player in _participants)
-            {
-                player.ClearMatchData();
-                player.CurrentMatch = null;
-            }
-
-            // Unsubscribe events
-
-            _matchEventSubscriptionDisposer?.Dispose();
-
-            // Emit MatchEndedEvent
-
-            var endedEvent = new MatchEndedEvent(CurrentMatch);
-
-            await _eventBus.EmitAsync(_runtime, this, endedEvent);
-
-            // Clear current match
-
-            CurrentMatch = null;
-
-            return true;
+            return UniTask.CompletedTask;
         }
     }
 }

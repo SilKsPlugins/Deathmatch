@@ -1,4 +1,6 @@
 ﻿using Deathmatch.API.Matches;
+using Deathmatch.API.Matches.Registrations;
+using Deathmatch.Core.Matches.Registrations;
 using Microsoft.Extensions.Logging;
 using OpenMod.Common.Helpers;
 using System;

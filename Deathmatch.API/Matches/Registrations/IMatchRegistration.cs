@@ -1,8 +1,9 @@
 ﻿using OpenMod.API.Prioritization;
 using System;
 using System.Collections.Generic;
+using Autofac;
 
-namespace Deathmatch.API.Matches
+namespace Deathmatch.API.Matches.Registrations
 {
     public interface IMatchRegistration
     {
@@ -15,6 +16,11 @@ namespace Deathmatch.API.Matches
         /// Describes whether or not this registration is enabled.
         /// </summary>
         bool Enabled { get; set; }
+
+        /// <summary>
+        /// Gets the type of the match.
+        /// </summary>
+        Type Type { get; set; }
 
         /// <summary>
         /// The priority of this match. Used to compare against others with same title.
@@ -35,10 +41,5 @@ namespace Deathmatch.API.Matches
         /// The aliases for identifying this match.
         /// </summary>
         List<string> Aliases { get; set; }
-
-        /// <summary>
-        /// Creates a new match instance to be ran.
-        /// </summary>
-        IMatch Instantiate(IServiceProvider serviceProvider);
     }
 }

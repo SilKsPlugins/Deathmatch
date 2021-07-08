@@ -8,7 +8,6 @@ using System;
 namespace Deathmatch.Core.Commands
 {
     [Command("dmend")]
-    [CommandSyntax("")]
     [CommandDescription("Ends the current match.")]
     public class CommandDMEnd : UnturnedCommand
     {
@@ -25,7 +24,7 @@ namespace Deathmatch.Core.Commands
 
         protected override async UniTask OnExecuteAsync()
         {
-            if (await _matchExecutor.EndMatch())
+            if (_matchExecutor.CurrentMatch != null && _matchExecutor.CurrentMatch.Status == MatchStatus.InProgress)
             {
                 await PrintAsync(_stringLocalizer["commands:dmend:success"]);
             }

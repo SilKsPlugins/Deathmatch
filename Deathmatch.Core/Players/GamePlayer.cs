@@ -4,7 +4,6 @@ using OpenMod.Unturned.Users;
 using SDG.Unturned;
 using Steamworks;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using UnityEngine;
 
@@ -27,7 +26,7 @@ namespace Deathmatch.Core.Players
 
         public bool IsInActiveMatch()
         {
-            return CurrentMatch != null && CurrentMatch.IsRunning;
+            return CurrentMatch != null && CurrentMatch.Status == MatchStatus.InProgress;
         }
 
         public T? GetMatchData<T>(string key)

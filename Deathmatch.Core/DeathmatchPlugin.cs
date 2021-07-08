@@ -1,9 +1,11 @@
 ﻿using Cysharp.Threading.Tasks;
 using Deathmatch.API.Matches;
+using Deathmatch.API.Matches.Registrations;
 using Deathmatch.API.Preservation;
 using Deathmatch.Core.Configuration;
 using Deathmatch.Core.Helpers;
 using Deathmatch.Core.Matches;
+using Deathmatch.Core.Matches.Registrations;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
@@ -121,11 +123,14 @@ namespace Deathmatch.Core
 
             _cancellationTokenSource.Cancel();
 
-            await _matchExecutor.EndMatch();
+            if (_matchExecutor.CurrentMatch != null)
+            {
+                await _matchExecutor.CurrentMatch.EndAsync();
+            }
 
             var participants = _matchExecutor.GetParticipants();
 
-            for (int i = participants.Count - 1; i >= 0; i--)
+            for (var i = participants.Count - 1; i >= 0; i--)
             {
                 await _matchExecutor.RemoveParticipant(participants.ElementAt(i));
             }
@@ -190,7 +195,7 @@ namespace Deathmatch.Core
             {
                 IMatchRegistration? registration = null;
 
-                if (_matchExecutor.CurrentMatch == null || !_matchExecutor.CurrentMatch.IsRunning)
+                if (_matchExecutor.CurrentMatch == null)
                 {
                     var registrations = _matchManager.GetMatchRegistrations();
 
@@ -214,13 +219,23 @@ namespace Deathmatch.Core
                     {
                         await DelaySeconds(delayPart);
 
+                        if (_matchExecutor.CurrentMatch != null)
+                        {
+                            break;
+                        }
+
                         if (message != null)
+                        {
                             await _userManager.BroadcastAsync(KnownActorTypes.Player,
                                 _stringLocalizer["announcements:planned_match",
                                     new { Match = registration, Time = message }]);
+                        }
                     }
 
-                    await _matchExecutor.StartMatch(registration);
+                    if (_matchExecutor.CurrentMatch == null)
+                    {
+                        await _matchExecutor.StartMatch(registration);
+                    }
                 }
             }
         }

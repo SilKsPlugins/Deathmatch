@@ -1,4 +1,5 @@
 ﻿using Cysharp.Threading.Tasks;
+using Deathmatch.API.Matches.Registrations;
 using Deathmatch.API.Players;
 using OpenMod.API.Ioc;
 using System.Collections.Generic;
@@ -15,6 +16,5 @@ namespace Deathmatch.API.Matches
         UniTask RemoveParticipant(IGamePlayer user);
 
         UniTask<bool> StartMatch(IMatchRegistration? registration = null);
-        UniTask<bool> EndMatch();
     }
 }
