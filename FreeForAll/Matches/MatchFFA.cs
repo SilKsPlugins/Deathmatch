@@ -34,7 +34,8 @@ namespace FreeForAll.Matches
     [MatchAlias("FFA")]
     public class MatchFFA : MatchBase,
         IInstanceEventListener<UnturnedPlayerDeathEvent>,
-        IInstanceEventListener<IGamePlayerSelectingRespawnEvent>
+        IInstanceEventListener<IGamePlayerSelectingRespawnEvent>,
+        IInstanceEventListener<UnturnedPlayerSpawnedEvent>
     {
         private readonly IPluginAccessor<FreeForAllPlugin> _pluginAccessor;
         private readonly ILogger<MatchFFA> _logger;
@@ -114,17 +115,24 @@ namespace FreeForAll.Matches
             }
         }
 
+        public async UniTask GrantGracePeriod(IGamePlayer player)
+        {
+            await UniTask.SwitchToMainThread();
+
+            _graceManager.GrantGracePeriod(player, Configuration.GetValue<float>("GracePeriod", 2));
+        }
+
         public async UniTask SpawnPlayer(IGamePlayer player, PlayerSpawn spawn)
         {
             await UniTask.SwitchToMainThread();
+
+            await GrantGracePeriod(player);
 
             spawn.SpawnPlayer(player);
 
             player.Heal();
 
             await GiveLoadout(player);
-
-            _graceManager.GrantGracePeriod(player, Configuration.GetValue<float>("GracePeriod", 2));
         }
 
         protected override async UniTask OnPlayerAdded(IGamePlayer player)
@@ -314,6 +322,24 @@ namespace FreeForAll.Matches
             @event.Yaw = spawn.Yaw;
 
             return UniTask.CompletedTask;
+        }
+
+        public async UniTask HandleEventAsync(object? sender, UnturnedPlayerSpawnedEvent @event)
+        {
+            var player = this.GetPlayer(@event.Player);
+
+            if (player == null || Status != MatchStatus.InProgress)
+            {
+                return;
+            }
+
+            await UniTask.SwitchToMainThread();
+
+            player.Heal();
+
+            await GrantGracePeriod(player);
+
+            await GiveLoadout(player);
         }
     }
 }
