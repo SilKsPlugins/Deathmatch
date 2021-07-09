@@ -26,6 +26,8 @@ namespace Deathmatch.Core.Commands
         {
             if (_matchExecutor.CurrentMatch != null && _matchExecutor.CurrentMatch.Status == MatchStatus.InProgress)
             {
+                await _matchExecutor.CurrentMatch.EndAsync();
+
                 await PrintAsync(_stringLocalizer["commands:dmend:success"]);
             }
             else
