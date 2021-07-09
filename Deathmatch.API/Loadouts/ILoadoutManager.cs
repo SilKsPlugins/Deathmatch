@@ -7,7 +7,6 @@ namespace Deathmatch.API.Loadouts
     public interface ILoadoutManager
     {
         IReadOnlyCollection<ILoadoutCategory> GetCategories();
-        ILoadoutCategory? GetCategory(string title);
 
         void AddCategory(ILoadoutCategory category);
 

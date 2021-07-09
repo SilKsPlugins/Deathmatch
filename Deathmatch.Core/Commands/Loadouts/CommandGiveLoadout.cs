@@ -8,6 +8,7 @@ using OpenMod.Core.Commands;
 using OpenMod.Unturned.Commands;
 using OpenMod.Unturned.Users;
 using System;
+using Deathmatch.Core.Loadouts;
 
 namespace Deathmatch.Core.Commands.Loadouts
 {
@@ -46,7 +47,7 @@ namespace Deathmatch.Core.Commands.Loadouts
             if (category == null)
                 throw new UserFriendlyException(_stringLocalizer["commands:loadout:no_gamemode"]);
 
-            var loadout = category.GetLoadout(loadoutTitle);
+            var loadout = category.GetLoadout(loadoutTitle, false);
 
             if (loadout == null)
                 throw new UserFriendlyException(_stringLocalizer["commands:loadout:no_loadout"]);

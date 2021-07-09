@@ -87,8 +87,9 @@ namespace FreeForAll.Matches
 
             var loadout = _loadoutSelector.GetLoadout(player, category);
 
-            if (loadout != null && await _permissionChecker.CheckPermissionAsync(player.User, loadout.Permission) ==
-                PermissionGrantResult.Grant)
+            if (loadout != null && (loadout.Permission == null ||
+                                    await _permissionChecker.CheckPermissionAsync(player.User, loadout.Permission) ==
+                                    PermissionGrantResult.Grant))
             {
                 return loadout;
             }

@@ -1,5 +1,6 @@
 ﻿using Cysharp.Threading.Tasks;
 using Deathmatch.API.Loadouts;
+using Deathmatch.Core.Loadouts;
 using Microsoft.Extensions.Localization;
 using OpenMod.API.Commands;
 using OpenMod.API.Prioritization;

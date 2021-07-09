@@ -11,6 +11,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using TeamDeathmatch.Loadouts;
 
 [assembly: PluginMetadata("TeamDeathmatch", DisplayName = "Team Deathmatch")]
 namespace TeamDeathmatch
@@ -47,13 +48,18 @@ namespace TeamDeathmatch
         {
             await ReloadSpawns();
 
-            var category = new LoadoutCategory("Team Deathmatch", new List<string> { "TeamDeathmatch", "TDM" }, this,
+            var category = new TeamLoadoutCategory("Team Deathmatch", new List<string> {"TeamDeathmatch", "TDM"}, this,
                 _dataStore);
             await category.LoadLoadouts();
 
             foreach (var loadout in category.GetLoadouts().OfType<Loadout>())
             {
-                _permissionRegistry.RegisterPermission(this, loadout.GetPermissionWithoutComponent());
+                var permission = loadout.GetPermissionWithoutComponent();
+
+                if (permission != null)
+                {
+                    _permissionRegistry.RegisterPermission(this, permission);
+                }
             }
 
             _loadoutManager.AddCategory(category);

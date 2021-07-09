@@ -6,7 +6,7 @@ namespace Deathmatch.API.Loadouts
     {
         string Title { get; }
 
-        string Permission { get; }
+        string? Permission { get; }
 
         void GiveToPlayer(IGamePlayer player);
     }

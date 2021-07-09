@@ -50,7 +50,12 @@ namespace FreeForAll
 
             foreach (var loadout in category.GetLoadouts().OfType<Loadout>())
             {
-                _permissionRegistry.RegisterPermission(this, loadout.GetPermissionWithoutComponent());
+                var permission = loadout.GetPermissionWithoutComponent();
+
+                if (permission != null)
+                {
+                    _permissionRegistry.RegisterPermission(this, permission);
+                }
             }
 
             _loadoutManager.AddCategory(category);

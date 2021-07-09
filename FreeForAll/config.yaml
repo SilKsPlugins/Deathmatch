@@ -13,13 +13,6 @@ MaxDuration: 600
 # Grace period after spawning in seconds
 GracePeriod: 2
 
-Loadouts:
-- Title: Main
-  Items:
-  - Id: Viper
-  - Id: Viper Magazine
-    Amount: 4
-
 Rewards:
   # Minimum number of total players needed to gain rewards
   # This is to stop players boosting and gaining massive

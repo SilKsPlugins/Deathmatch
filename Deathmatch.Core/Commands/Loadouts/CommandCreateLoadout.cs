@@ -53,21 +53,24 @@ namespace Deathmatch.Core.Commands.Loadouts
             var category = _loadoutManager.GetCategory(gameMode);
 
             if (category == null)
+            {
                 throw new UserFriendlyException(_stringLocalizer["commands:loadout:no_gamemode"]);
+            }
 
             var oldLoadout = category.GetLoadout(loadoutTitle);
 
-            var newLoadout = Loadout.FromPlayer(player);
+            var title = loadoutTitle.ToLower();
+            var permissionWithoutComponent = "loadouts." + title;
+            var permission = category.Component.OpenModComponentId + ":" + permissionWithoutComponent;
 
-            newLoadout.Title = loadoutTitle;
-            newLoadout.Permission = category.Component.OpenModComponentId + ":loadouts." + loadoutTitle;
+            var newLoadout = Loadout.FromPlayer(player, loadoutTitle.ToLower(), permission);
 
             if (oldLoadout != null)
             {
                 category.RemoveLoadout(oldLoadout);
             }
 
-            _permissionRegistry.RegisterPermission(category.Component, newLoadout.GetPermissionWithoutComponent());
+            _permissionRegistry.RegisterPermission(category.Component, permissionWithoutComponent);
 
             category.AddLoadout(newLoadout);
 

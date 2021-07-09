@@ -17,20 +17,6 @@ MaxDuration: 600
 # Grace period after spawning in seconds
 GracePeriod: 2
 
-Loadouts:
-- Title: Red
-  Items:
-  - Id: Viper
-  - Id: Viper Magazine
-    Amount: 4
-  - Id: Red Shirt
-- Title: Blue
-  Items:
-  - Id: Viper
-  - Id: Viper Magazine
-    Amount: 4
-  - Id: Blue Shirt
-
 Rewards:
   # Minimum number of total players needed to gain rewards
   # This is to stop players boosting and gaining massive

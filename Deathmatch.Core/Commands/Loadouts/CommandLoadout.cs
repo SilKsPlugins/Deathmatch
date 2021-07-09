@@ -1,6 +1,7 @@
 ﻿using Cysharp.Threading.Tasks;
 using Deathmatch.API.Loadouts;
 using Deathmatch.API.Players;
+using Deathmatch.Core.Loadouts;
 using Microsoft.Extensions.Localization;
 using OpenMod.API.Commands;
 using OpenMod.API.Permissions;
@@ -48,15 +49,23 @@ namespace Deathmatch.Core.Commands.Loadouts
             var category = _loadoutManager.GetCategory(gameMode);
 
             if (category == null)
+            {
                 throw new UserFriendlyException(_stringLocalizer["commands:loadout:no_gamemode"]);
+            }
 
-            var loadout = category.GetLoadout(loadoutTitle);
+            var loadout = category.GetLoadout(loadoutTitle, false);
 
             if (loadout == null)
+            {
                 throw new UserFriendlyException(_stringLocalizer["commands:loadout:no_loadout"]);
+            }
 
-            if (await _permissionChecker.CheckPermissionAsync(Context.Actor, loadout.Permission) != PermissionGrantResult.Grant)
+            if (loadout.Permission != null &&
+                await _permissionChecker.CheckPermissionAsync(Context.Actor, loadout.Permission) !=
+                PermissionGrantResult.Grant)
+            {
                 throw new UserFriendlyException(_stringLocalizer["commands:loadout:no_permission"]);
+            }
 
             await _loadoutSelector.SetLoadout(player, category.Title, loadout.Title);
 

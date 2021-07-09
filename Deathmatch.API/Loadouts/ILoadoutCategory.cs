@@ -11,8 +11,7 @@ namespace Deathmatch.API.Loadouts
         IReadOnlyCollection<string> Aliases { get; }
 
         IOpenModComponent Component { get; }
-
-        ILoadout? GetLoadout(string title);
+        
         IReadOnlyCollection<ILoadout> GetLoadouts();
 
         Task SaveLoadouts();

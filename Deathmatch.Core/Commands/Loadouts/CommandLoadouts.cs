@@ -1,6 +1,7 @@
 ﻿using Cysharp.Threading.Tasks;
 using Deathmatch.API.Loadouts;
 using Deathmatch.API.Players;
+using Deathmatch.Core.Loadouts;
 using Microsoft.Extensions.Localization;
 using OpenMod.API.Permissions;
 using OpenMod.API.Prioritization;
@@ -42,9 +43,12 @@ namespace Deathmatch.Core.Commands.Loadouts
 
             foreach (var loadout in category.GetLoadouts())
             {
-                if (await _permissionChecker.CheckPermissionAsync(actor, loadout.Permission)
-                    == PermissionGrantResult.Grant)
+                if (loadout.Permission == null ||
+                    await _permissionChecker.CheckPermissionAsync(actor, loadout.Permission) ==
+                    PermissionGrantResult.Grant)
+                {
                     loadouts.Add(loadout.Title);
+                }
             }
 
             return loadouts;
@@ -81,7 +85,7 @@ namespace Deathmatch.Core.Commands.Loadouts
             }
             else
             {
-                var category = _loadoutManager.GetCategory(gameMode);
+                var category = _loadoutManager.GetCategory(gameMode, false);
 
                 if (category == null)
                 {

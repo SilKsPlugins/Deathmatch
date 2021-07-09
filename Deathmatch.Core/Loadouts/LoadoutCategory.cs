@@ -16,50 +16,55 @@ namespace Deathmatch.Core.Loadouts
 
         public IOpenModComponent Component { get; }
 
-        private List<ILoadout> _loadouts;
-        private readonly IDataStore _dataStore;
+        protected List<ILoadout> Loadouts;
+        protected readonly IDataStore DataStore;
 
-        public LoadoutCategory(string title, IReadOnlyCollection<string>? aliases, IOpenModComponent component, IDataStore dataStore, List<ILoadout>? loadouts = null)
+        protected const string DataStoreKey = "loadouts";
+
+        public LoadoutCategory(string title, IReadOnlyCollection<string>? aliases, IOpenModComponent component,
+            IDataStore dataStore, List<ILoadout>? loadouts = null)
         {
             Title = title;
             Aliases = aliases ?? new List<string>();
 
             Component = component;
-            _dataStore = dataStore;
+            DataStore = dataStore;
 
-            _loadouts = loadouts ?? new List<ILoadout>();
+            Loadouts = loadouts ?? new List<ILoadout>();
         }
 
-        public ILoadout? GetLoadout(string title) =>
-            _loadouts.FirstOrDefault(x => x.Title.Equals(title, StringComparison.OrdinalIgnoreCase));
+        public IReadOnlyCollection<ILoadout> GetLoadouts() => Loadouts.AsReadOnly();
 
-        public IReadOnlyCollection<ILoadout> GetLoadouts() => _loadouts.AsReadOnly();
-
-        private const string DataStoreKey = "loadouts";
-
-        public async Task LoadLoadouts()
+        public virtual async Task LoadLoadouts()
         {
-            _loadouts = new List<ILoadout>();
+            var loadouts = new List<ILoadout>();
 
-            if (await _dataStore.ExistsAsync(DataStoreKey))
+            if (await DataStore.ExistsAsync(DataStoreKey))
             {
-                _loadouts.AddRange(await _dataStore.LoadAsync<List<Loadout>>(DataStoreKey) ?? new List<Loadout>());
+                loadouts.AddRange(await DataStore.LoadAsync<List<Loadout>>(DataStoreKey) ?? new List<Loadout>());
             }
+
+            Loadouts = loadouts;
         }
 
-        public Task SaveLoadouts() => _dataStore.SaveAsync(DataStoreKey, _loadouts.OfType<Loadout>().ToList());
-
-        public void AddLoadout(ILoadout loadout)
+        public virtual async Task SaveLoadouts()
         {
-            if (GetLoadout(loadout.Title) != null)
+            await DataStore.SaveAsync(DataStoreKey, Loadouts.OfType<Loadout>().ToList());
+        }
+
+        public virtual void AddLoadout(ILoadout loadout)
+        {
+            if (this.GetLoadout(loadout.Title) != null)
+            {
                 throw new ArgumentException("Loadout with given title already exists", nameof(loadout));
+            }
 
-            _loadouts.Add(loadout);
+            Loadouts.Add(loadout);
         }
 
-        public bool RemoveLoadout(ILoadout loadout)
+        public virtual bool RemoveLoadout(ILoadout loadout)
         {
-            return _loadouts.Remove(loadout);
+            return Loadouts.Remove(loadout);
         }
     }
 }
