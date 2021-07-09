@@ -1,4 +1,5 @@
-﻿using Deathmatch.API.Players;
+﻿using Cysharp.Threading.Tasks;
+using Deathmatch.API.Players;
 using Deathmatch.Core.Helpers;
 using Deathmatch.Core.Players.Events;
 using Microsoft.Extensions.DependencyInjection;
@@ -7,11 +8,13 @@ using OpenMod.API.Eventing;
 using OpenMod.API.Ioc;
 using OpenMod.API.Prioritization;
 using OpenMod.API.Users;
+using OpenMod.Core.Eventing;
 using OpenMod.Core.Helpers;
-using OpenMod.Core.Users;
 using OpenMod.UnityEngine.Extensions;
 using OpenMod.Unturned.Users;
+using OpenMod.Unturned.Users.Events;
 using SDG.Unturned;
+using SilK.Unturned.Extras.Events;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -21,7 +24,9 @@ using UnityEngine;
 namespace Deathmatch.Core.Players
 {
     [ServiceImplementation(Lifetime = ServiceLifetime.Singleton, Priority = Priority.Lowest)]
-    public class GamePlayerManager : IGamePlayerManager, IDisposable
+    public class GamePlayerManager : IGamePlayerManager, IDisposable,
+        IInstanceEventListener<UnturnedUserConnectedEvent>,
+        IInstanceEventListener<UnturnedUserDisconnectedEvent>
     {
         private readonly IEventBus _eventBus;
         private readonly IRuntime _runtime;
@@ -53,7 +58,7 @@ namespace Deathmatch.Core.Players
             PlayerLife.OnSelectingRespawnPoint -= OnSelectingRespawnPoint;
         }
 
-        internal async Task AddUser(UnturnedUser user)
+        private async Task AddUser(UnturnedUser user)
         {
             if (_players.All(x => x.SteamId != user.SteamId))
             {
@@ -65,7 +70,7 @@ namespace Deathmatch.Core.Players
             }
         }
 
-        internal async Task RemoveUser(UnturnedUser user)
+        private async Task RemoveUser(UnturnedUser user)
         {
             var player = _players.FirstOrDefault(x => x.SteamId != user.SteamId);
 
@@ -122,6 +127,18 @@ namespace Deathmatch.Core.Players
 
             position = @event.Position.ToUnityVector();
             yaw = @event.Yaw;
+        }
+
+        [EventListener(Priority = EventListenerPriority.Lowest)]
+        public async UniTask HandleEventAsync(object? sender, UnturnedUserConnectedEvent @event)
+        {
+            await AddUser(@event.User);
+        }
+
+        [EventListener(Priority = EventListenerPriority.Lowest)]
+        public async UniTask HandleEventAsync(object? sender, UnturnedUserDisconnectedEvent @event)
+        {
+            await RemoveUser(@event.User);
         }
     }
 }
