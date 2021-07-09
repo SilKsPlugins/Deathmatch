@@ -4,18 +4,19 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using OpenMod.API.Plugins;
 using OpenMod.Common.Helpers;
+using OpenMod.Core.Events;
 using OpenMod.Core.Ioc;
 using OpenMod.Unturned.Plugins;
 using SilK.Unturned.Extras.Events;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 
 [assembly: PluginMetadata("Deathmatch.Addons", DisplayName = "Deathmatch Addons")]
 namespace Deathmatch.Addons
 {
-    public class DeathmatchAddonsPlugin : OpenModUnturnedPlugin
+    public class DeathmatchAddonsPlugin : OpenModUnturnedPlugin,
+        IInstanceEventListener<OpenModInitializedEvent>
     {
         private readonly ILogger<DeathmatchAddonsPlugin> _logger;
         private readonly IConfiguration _configuration;
@@ -23,7 +24,6 @@ namespace Deathmatch.Addons
         private readonly ILifetimeScope _lifetimeScope;
 
         private readonly List<IAddon> _loadedAddons;
-        private readonly Dictionary<Type, List<(IAddon addon, MethodInfo method)>> _subscribedEvents;
 
         public DeathmatchAddonsPlugin(ILogger<DeathmatchAddonsPlugin> logger,
             IConfiguration configuration,
@@ -37,10 +37,9 @@ namespace Deathmatch.Addons
             _logger = logger;
 
             _loadedAddons = new List<IAddon>();
-            _subscribedEvents = new Dictionary<Type, List<(IAddon addon, MethodInfo method)>>();
         }
 
-        protected override UniTask OnLoadAsync()
+        public async UniTask HandleEventAsync(object? sender, OpenModInitializedEvent @event)
         {
             var addonTypes = GetType().Assembly.FindTypes<IAddon>().ToList();
 
@@ -55,13 +54,13 @@ namespace Deathmatch.Addons
                     if (disabledAddons.Any(x => x.Equals(addon.Title, StringComparison.OrdinalIgnoreCase)))
                     {
                         _logger.LogInformation($"Skipping disabled addon - {addon.Title}");
-                        
+
                         continue;
                     }
 
                     _eventSubscriber.Subscribe(addon, this);
 
-                    addon.LoadAsync();
+                    await addon.LoadAsync();
 
                     _loadedAddons.Add(addon);
 
@@ -72,8 +71,6 @@ namespace Deathmatch.Addons
                     _logger.LogError(ex, $"Error occurred while loading addon ({type.Name})");
                 }
             }
-
-            return UniTask.CompletedTask;
         }
 
         protected override UniTask OnUnloadAsync()
