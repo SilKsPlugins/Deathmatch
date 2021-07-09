@@ -68,6 +68,7 @@ namespace Deathmatch.Addons.Addons
             {
                 if (isDead)
                 {
+                    OnDeathDropInventory?.Invoke(__instance.player);
                     OnDeathDropClothing?.Invoke(__instance.player);
                 }
             }
