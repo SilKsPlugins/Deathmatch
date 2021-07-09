@@ -7,6 +7,7 @@ commands:
   dmend:
     success: "Successfully ended match."
     failure: "Failed to end match: there is no match in progress."
+    failure_ending: "Failed to end match: the match is ending."
   join:
     success: "Successfully joined the match/match pool."
     already: "You've already joined the match/match pool."

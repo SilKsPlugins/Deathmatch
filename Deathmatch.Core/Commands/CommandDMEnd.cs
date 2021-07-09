@@ -24,11 +24,18 @@ namespace Deathmatch.Core.Commands
 
         protected override async UniTask OnExecuteAsync()
         {
-            if (_matchExecutor.CurrentMatch != null && _matchExecutor.CurrentMatch.Status == MatchStatus.InProgress)
+            if (_matchExecutor.CurrentMatch != null)
             {
-                await _matchExecutor.CurrentMatch.EndAsync();
+                if (_matchExecutor.CurrentMatch.Status == MatchStatus.InProgress)
+                {
+                    await _matchExecutor.CurrentMatch.EndAsync();
 
-                await PrintAsync(_stringLocalizer["commands:dmend:success"]);
+                    await PrintAsync(_stringLocalizer["commands:dmend:success"]);
+                }
+                else
+                {
+                    await PrintAsync(_stringLocalizer["commands:dmend:failure_ending"]);
+                }
             }
             else
             {
