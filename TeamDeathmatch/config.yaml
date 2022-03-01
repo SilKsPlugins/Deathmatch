@@ -33,12 +33,15 @@ Rewards:
   - Id: Eaglefire
     Amount: 1
     Chance: 0.1 # Represents a 10% chance
+
   Losers: # Only losers will receive these rewards
   - Id: Tomato
     Amount: 5
+
   Tied: # If the game comes to a tie, both teams will receive these rewards
   - Id: Grilled Cheese Sandwich
     Amount: 2
+
   All: # Both teams will receive these rewards in all cases
   - Id: Police Vest
     Amount: 1

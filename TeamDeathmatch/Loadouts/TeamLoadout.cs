@@ -1,28 +1,23 @@
-﻿using Deathmatch.Core.Items;
-using Deathmatch.Core.Loadouts;
+﻿using Deathmatch.Core.Loadouts;
 using System;
-using System.Collections.Generic;
 using TeamDeathmatch.Items;
 
 namespace TeamDeathmatch.Loadouts
 {
     [Serializable]
-    public class TeamLoadout : LoadoutBase
+    public class TeamLoadout : LoadoutBase<TeamItem>
     {
-        public List<TeamItem> Items { get; set; }
-
-        public TeamLoadout() : this("", null)
+        public TeamLoadout()
         {
         }
 
         public TeamLoadout(string title, string? permission) : base(title, permission)
         {
-            Items = new List<TeamItem>();
         }
 
-        public override IReadOnlyCollection<Item> GetItems()
+        protected override TeamItem CreateItem(ushort id, byte amount, byte quality, byte[] state)
         {
-            return Items;
+            return new(id, amount, quality, state);
         }
     }
 }

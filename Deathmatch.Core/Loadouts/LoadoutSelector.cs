@@ -1,159 +1,122 @@
 ﻿using Cysharp.Threading.Tasks;
 using Deathmatch.API.Loadouts;
 using Deathmatch.API.Players;
-using Deathmatch.API.Players.Events;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using OpenMod.API.Ioc;
+using OpenMod.API.Persistence;
 using OpenMod.API.Prioritization;
-using OpenMod.API.Users;
-using OpenMod.Common.Helpers;
 using OpenMod.Core.Helpers;
+using OpenMod.Core.Plugins.Events;
 using SilK.Unturned.Extras.Events;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Deathmatch.Core.Loadouts
 {
     [ServiceImplementation(Lifetime = ServiceLifetime.Singleton, Priority = Priority.Lowest)]
-    public sealed class LoadoutSelector : ILoadoutSelector,
-        IInstanceEventListener<IGamePlayerConnectedEvent>,
-        IInstanceEventListener<IGamePlayerDisconnectedEvent>
+    public sealed class LoadoutSelector : ILoadoutSelector, IDisposable,
+        IInstanceEventListener<PluginLoadedEvent>
     {
-        private readonly ILoadoutManager _loadoutManager;
-        private readonly IUserDataStore _userDataStore;
-        private readonly ILogger<LoadoutSelector> _logger;
-
-        private readonly Dictionary<IGamePlayer, List<LoadoutSelection>> _loadoutSelections;
-
-        public LoadoutSelector(ILoadoutManager loadoutManager,
-            IUserDataStore userDataStore,
-            IGamePlayerManager playerManager,
-            ILogger<LoadoutSelector> logger)
+        public class CategorySelections
         {
-            _loadoutManager = loadoutManager;
-            _userDataStore = userDataStore;
-            _logger = logger;
+            public string CategoryTitle { get; set; } = "";
 
-            _loadoutSelections = new Dictionary<IGamePlayer, List<LoadoutSelection>>();
-
-            AsyncHelper.RunSync(async () =>
-            {
-                var existingPlayers = playerManager.GetPlayers();
-
-                foreach (var user in existingPlayers)
-                {
-                    await LoadPlayer(user);
-                }
-            });
+            public Dictionary<ulong, string> Selections = new();
         }
 
-        public ILoadout? GetLoadout(IGamePlayer player, string category)
-        {
-            var loadoutCategory = _loadoutManager.GetCategory(category);
+        private IDataStore? _dataStore;
+        private readonly CancellationTokenSource _cts;
+        private List<CategorySelections> _categories;
 
-            if (loadoutCategory == null)
+        private bool _isDirty;
+
+        private const string DataStoreKey = "loadoutselections";
+
+        public LoadoutSelector()
+        {
+            _cts = new();
+            _categories = new();
+        }
+
+        public void Dispose()
+        {
+            _cts.Cancel();
+        }
+
+        public async UniTask HandleEventAsync(object? sender, PluginLoadedEvent @event)
+        {
+            if (@event.Plugin.GetType() != typeof(DeathmatchPlugin))
+            {
+                return;
+            }
+
+            _dataStore = @event.Plugin.DataStore;
+
+            _categories = await Load();
+
+            AsyncHelper.Schedule($"{nameof(LoadoutSelector)} - {nameof(SaveLoop)}", SaveLoop);
+        }
+
+        private async Task SaveLoop()
+        {
+            try
+            {
+                var cancellationToken = _cts.Token;
+
+                while (!_cts.IsCancellationRequested)
+                {
+                    await Task.Delay(60000, cancellationToken);
+
+                    if (_dataStore != null && _isDirty)
+                    {
+                        _isDirty = false;
+                        await _dataStore.SaveAsync(DataStoreKey, _categories);
+                    }
+                }
+            }
+            catch (TaskCanceledException)
+            {
+            }
+        }
+
+        private async Task<List<CategorySelections>> Load()
+        {
+            if (_dataStore == null)
+            {
+                throw new Exception("No data store to load spawns");
+            }
+
+            return await _dataStore.LoadAsync<List<CategorySelections>>(DataStoreKey) ?? new();
+        }
+
+        public ILoadout? GetSelectedLoadout(IGamePlayer player, ILoadoutCategory category)
+        {
+            var categorySelections = _categories.FirstOrDefault(x => x.CategoryTitle.Equals(category.Title));
+
+            if (categorySelections == null || !categorySelections.Selections.TryGetValue(player.SteamId.m_SteamID, out var selection))
             {
                 return null;
             }
-
-            var loadoutTitle = _loadoutSelections[player]
-                .FirstOrDefault(x => x.GameMode.Equals(loadoutCategory.Title, StringComparison.OrdinalIgnoreCase))
-                ?.Loadout;
-
-            return loadoutTitle == null ? null : loadoutCategory.GetLoadout(loadoutTitle);
+            
+            return category.GetLoadout(selection);
         }
 
-        public async Task SetLoadout(IGamePlayer player, string category, string loadout)
+        public void SetSelectedLoadout(IGamePlayer player, ILoadoutCategory category, ILoadout loadout)
         {
-            var loadoutCategory = _loadoutManager.GetCategory(category);
+            var categorySelections = _categories.FirstOrDefault(x => x.CategoryTitle.Equals(category.Title));
 
-            if (loadoutCategory == null) return;
-
-            var selections = _loadoutSelections[player];
-
-            var selection =
-                selections.FirstOrDefault(x => x.GameMode.Equals(loadoutCategory.Title, StringComparison.OrdinalIgnoreCase));
-
-            if (selection == null)
+            if (categorySelections == null)
             {
-                selection = new LoadoutSelection()
-                {
-                    GameMode = loadoutCategory.Title,
-                    Loadout = loadout
-                };
-
-                selections.Add(selection);
-            }
-            else
-            {
-                selection.Loadout = loadout;
+                categorySelections = new CategorySelections {CategoryTitle = category.Title};
+                _categories.Add(categorySelections);
             }
 
-            await _userDataStore.SetUserDataAsync(player.User.Id, player.User.Type, LoadoutSelectionsKey,
-                selections);
-        }
+            categorySelections.Selections[player.SteamId.m_SteamID] = loadout.Title;
 
-        private const string LoadoutSelectionsKey = "LoadoutSelections";
-
-        private async Task LoadPlayer(IGamePlayer player)
-        {
-            var userData =
-                await _userDataStore.GetUserDataAsync<object>(player.User.Id, player.User.Type,
-                    LoadoutSelectionsKey);
-
-            List<object>? selections = null;
-
-            if (userData is List<object> objects)
-            {
-                selections = objects;
-            }
-            else if (userData is List<LoadoutSelection> other)
-            {
-                selections = other.Cast<object>().ToList();
-            }
-
-            var loaded = new List<LoadoutSelection>();
-
-            if (selections != null)
-            {
-                loaded.AddRange(selections.OfType<LoadoutSelection>());
-
-                loaded.AddRange(selections.OfType<Dictionary<object, object>>()
-                    .Select(selection => selection.ToObject<LoadoutSelection>()).Where(parsed => parsed != null));
-            }
-
-            if (!_loadoutSelections.ContainsKey(player))
-            {
-                _loadoutSelections.Add(player, loaded);
-            }
-            else
-            {
-                _loadoutSelections[player] = loaded;
-            }
-        }
-
-        private async Task SavePlayer(IGamePlayer player)
-        {
-            if (_loadoutSelections.ContainsKey(player))
-            {
-                await _userDataStore.SetUserDataAsync(player.User.Id, player.User.Type, LoadoutSelectionsKey,
-                    _loadoutSelections[player]);
-
-                _loadoutSelections.Remove(player);
-            }
-        }
-
-        public async UniTask HandleEventAsync(object? sender, IGamePlayerConnectedEvent @event)
-        {
-            await LoadPlayer(@event.Player);
-        }
-
-        public async UniTask HandleEventAsync(object? sender, IGamePlayerDisconnectedEvent @event)
-        {
-            await SavePlayer(@event.Player);
+            _isDirty = true;
         }
     }
 }

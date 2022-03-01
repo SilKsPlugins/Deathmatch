@@ -10,6 +10,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
+using OpenMod.API.Commands;
 using OpenMod.API.Plugins;
 using OpenMod.API.Users;
 using OpenMod.Core.Users;
@@ -30,8 +31,6 @@ namespace Deathmatch.Core
         private readonly IMatchExecutor _matchExecutor;
         private readonly IPreservationManager _preservationManager;
         private readonly IUserManager _userManager;
-        private readonly ILogger<DeathmatchPlugin> _logger;
-        private readonly IConfiguration _configuration;
         private readonly IStringLocalizer _stringLocalizer;
         private readonly IServiceProvider _serviceProvider;
 
@@ -44,8 +43,6 @@ namespace Deathmatch.Core
             IMatchExecutor matchExecutor,
             IPreservationManager preservationManager,
             IUserManager userManager,
-            ILogger<DeathmatchPlugin> logger,
-            IConfiguration configuration,
             IStringLocalizer stringLocalizer,
             IServiceProvider serviceProvider) : base(serviceProvider)
         {
@@ -54,8 +51,6 @@ namespace Deathmatch.Core
             _matchExecutor = matchExecutor;
             _preservationManager = preservationManager;
             _userManager = userManager;
-            _logger = logger;
-            _configuration = configuration;
             _stringLocalizer = stringLocalizer;
             _serviceProvider = serviceProvider;
 
@@ -103,7 +98,7 @@ namespace Deathmatch.Core
 
             foreach (var registration in matchRegistrations)
             {
-                _logger.LogInformation(_stringLocalizer["logs:registered_match", new { Registration = registration }]);
+                Logger.LogInformation(_stringLocalizer["logs:registered_match", new { Registration = registration }]);
             }
 
             _cancellationTokenSource = new CancellationTokenSource();
@@ -156,14 +151,14 @@ namespace Deathmatch.Core
 
             _loopStarted = true;
 
-            var delay = _configuration.GetValue<int>("MatchInterval");
+            var delay = Configuration.GetValue<int>("MatchInterval");
 
             if (delay <= 0)
             {
                 return;
             }
 
-            var announcements = _configuration.GetSection("AutoAnnouncements").Get<List<AutoAnnouncement>>() ??
+            var announcements = Configuration.GetSection("AutoAnnouncements").Get<List<AutoAnnouncement>>() ??
                                 new List<AutoAnnouncement>();
 
             // Sorts descending
@@ -201,7 +196,7 @@ namespace Deathmatch.Core
 
                     if (registrations.Count == 0)
                     {
-                        _logger.LogCritical(_stringLocalizer["logs:no_registrations"]);
+                        Logger.LogCritical(_stringLocalizer["logs:no_registrations"]);
                     }
                     else
                     {
@@ -232,9 +227,22 @@ namespace Deathmatch.Core
                         }
                     }
 
-                    if (_matchExecutor.CurrentMatch == null)
+                    if (_matchExecutor.CurrentMatch != null)
+                    {
+                        continue;
+                    }
+
+                    try
                     {
                         await _matchExecutor.StartMatch(registration);
+                    }
+                    catch (UserFriendlyException ex)
+                    {
+                        Logger.LogError($"Unable to automatically start match: {ex.Message}");
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.LogError(ex, "Unable to automatically start match.");
                     }
                 }
             }

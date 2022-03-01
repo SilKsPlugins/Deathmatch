@@ -3,27 +3,25 @@ using Deathmatch.API.Loadouts;
 using Deathmatch.API.Matches;
 using Deathmatch.API.Players;
 using Deathmatch.API.Players.Events;
-using Deathmatch.Core.Grace;
 using Deathmatch.Core.Helpers;
 using Deathmatch.Core.Items;
 using Deathmatch.Core.Loadouts;
 using Deathmatch.Core.Matches;
-using Deathmatch.Core.Matches.Extensions;
 using Deathmatch.Core.Spawns;
-using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using OpenMod.API.Commands;
-using OpenMod.API.Permissions;
-using OpenMod.API.Plugins;
 using OpenMod.Core.Users;
 using OpenMod.UnityEngine.Extensions;
 using OpenMod.Unturned.Players.Life.Events;
-using SDG.Unturned;
 using SilK.Unturned.Extras.Events;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using TeamDeathmatch.Configuration;
+using TeamDeathmatch.Loadouts;
 using TeamDeathmatch.Players;
+using TeamDeathmatch.Spawns;
 using TeamDeathmatch.Teams;
 
 namespace TeamDeathmatch.Matches
@@ -31,16 +29,14 @@ namespace TeamDeathmatch.Matches
     [Match("Team Deathmatch")]
     [MatchDescription("A game mode where two teams fight to a kill threshold.")]
     [MatchAlias("TDM")]
-    public class MatchTDM : MatchBase,
+    public class MatchTDM : MatchBase<TeamDeathmatchConfiguration, TDMLoadoutCategory>,
         IInstanceEventListener<UnturnedPlayerDamagingEvent>,
         IInstanceEventListener<UnturnedPlayerDeathEvent>,
+        IInstanceEventListener<UnturnedPlayerSpawnedEvent>,
         IInstanceEventListener<IGamePlayerSelectingRespawnEvent>
     {
-        private readonly IPluginAccessor<TeamDeathmatchPlugin> _pluginAccessor;
-        private readonly ILoadoutManager _loadoutManager;
-        private readonly ILoadoutSelector _loadoutSelector;
-        private readonly IPermissionChecker _permissionChecker;
-        private readonly IGraceManager _graceManager;
+        private readonly BlueSpawnDirectory _blueSpawnDirectory;
+        private readonly RedSpawnDirectory _redSpawnDirectory;
 
         private int _redDeaths;
         private int _blueDeaths;
@@ -51,18 +47,12 @@ namespace TeamDeathmatch.Matches
         private readonly List<PlayerSpawn> _redInitialSpawns;
         private readonly List<PlayerSpawn> _blueInitialSpawns;
 
-        public MatchTDM(IPluginAccessor<TeamDeathmatchPlugin> pluginAccessor,
-            ILoadoutManager loadoutManager,
-            ILoadoutSelector loadoutSelector,
-            IPermissionChecker permissionChecker,
-            IGraceManager graceManager,
-            IServiceProvider serviceProvider) : base(serviceProvider)
+        public MatchTDM(IServiceProvider serviceProvider,
+            BlueSpawnDirectory blueSpawnDirectory,
+            RedSpawnDirectory redSpawnDirectory) : base(serviceProvider)
         {
-            _pluginAccessor = pluginAccessor;
-            _loadoutManager = loadoutManager;
-            _loadoutSelector = loadoutSelector;
-            _permissionChecker = permissionChecker;
-            _graceManager = graceManager;
+            _blueSpawnDirectory = blueSpawnDirectory;
+            _redSpawnDirectory = redSpawnDirectory;
 
             _redDeaths = 0;
             _blueDeaths = 0;
@@ -78,8 +68,8 @@ namespace TeamDeathmatch.Matches
         {
             return team switch
             {
-                Team.Red => _pluginAccessor.Instance!.RedSpawns,
-                Team.Blue => _pluginAccessor.Instance!.BlueSpawns,
+                Team.Red => _redSpawnDirectory.Spawns,
+                Team.Blue => _blueSpawnDirectory.Spawns,
                 _ => throw new InvalidOperationException("Player has no team")
             };
         }
@@ -88,18 +78,14 @@ namespace TeamDeathmatch.Matches
 
         public async Task<ILoadout?> GetLoadout(IGamePlayer player)
         {
-            const string category = "Team Deathmatch";
+            var loadout = LoadoutSelector.GetSelectedLoadout(player, LoadoutCategory);
 
-            var loadout = _loadoutSelector.GetLoadout(player, category);
-
-            if (loadout != null && (loadout.Permission == null ||
-                                    await _permissionChecker.CheckPermissionAsync(player.User, loadout.Permission) ==
-                                    PermissionGrantResult.Grant))
+            if (loadout != null && await loadout.IsPermitted(player.User))
             {
                 return loadout;
             }
 
-            return await _loadoutManager.GetRandomLoadout(category, player, _permissionChecker);
+            return await LoadoutCategory.GetRandomLoadout(player);
         }
 
         public async UniTask GiveLoadout(IGamePlayer player)
@@ -115,21 +101,49 @@ namespace TeamDeathmatch.Matches
             }
             else
             {
-                loadout.GiveToPlayer(player);
+                await loadout.GiveToPlayer(player);
             }
         }
 
-        public async UniTask SpawnPlayer(IGamePlayer player, PlayerSpawn spawn)
+        public async UniTask GrantGracePeriod(IGamePlayer player)
         {
             await UniTask.SwitchToMainThread();
 
-            spawn.SpawnPlayer(player);
+            GraceManager.GrantGracePeriod(player, Configuration.Instance.GracePeriod);
+        }
 
-            player.Heal();
+        public async UniTask SpawnPlayer(IGamePlayer player, PlayerSpawn? spawn = null)
+        {
+            await UniTask.SwitchToMainThread();
 
-            await GiveLoadout(player);
+            try
+            {
+                await GrantGracePeriod(player);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error occurred when granting player grace period");
+            }
 
-            _graceManager.GrantGracePeriod(player, Configuration.GetValue<float>("GracePeriod", 2));
+            spawn?.SpawnPlayer(player);
+
+            try
+            {
+                player.Heal();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error occurred when healing player");
+            }
+
+            try
+            {
+                await GiveLoadout(player);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error occurred when giving player loadout");
+            }
         }
 
         protected override async UniTask OnPlayerAdded(IGamePlayer player)
@@ -229,18 +243,14 @@ namespace TeamDeathmatch.Matches
                     StringLocalizer["announcements:match_end:tie"]);
             }
 
-            if (Players.Count >= Configuration.GetValue("Rewards:MinimumPlayers", 8))
+            if (Players.Count >= Configuration.Instance.Rewards.MinimumPlayers)
             {
-                var winnerRewards =
-                    Configuration.GetSection("Rewards:Winners").Get<List<ChanceItem>>() ?? new List<ChanceItem>();
-                var loserRewards =
-                    Configuration.GetSection("Rewards:Losers").Get<List<ChanceItem>>() ?? new List<ChanceItem>();
-                var tiedRewards =
-                    Configuration.GetSection("Rewards:Tied").Get<List<ChanceItem>>() ?? new List<ChanceItem>();
-                var allRewards =
-                    Configuration.GetSection("Rewards:All").Get<List<ChanceItem>>() ?? new List<ChanceItem>();
+                var winnerRewards = Configuration.Instance.Rewards.Winners;
+                var loserRewards = Configuration.Instance.Rewards.Losers;
+                var tiedRewards = Configuration.Instance.Rewards.Tied;
+                var allRewards = Configuration.Instance.Rewards.All;
 
-                void GiveRewards(IGamePlayer player, List<ChanceItem> items)
+                void GiveRewards(IGamePlayer player, IEnumerable<ChanceItem> items)
                 {
                     foreach (var item in items)
                     {
@@ -270,7 +280,7 @@ namespace TeamDeathmatch.Matches
 
         private void SetupDelayedEnd()
         {
-            var maxDuration = Configuration.GetValue("MaxDuration", 0f);
+            var maxDuration = Configuration.Instance.MaxDuration;
 
             if (maxDuration <= 0)
             {
@@ -294,7 +304,7 @@ namespace TeamDeathmatch.Matches
 
             if (victim != null && killer != null && victim != killer
                 && victim.GetTeam() == killer.GetTeam()
-                && !Configuration.GetValue("FriendlyFire", false))
+                && !Configuration.Instance.FriendlyFire)
             {
                 @event.IsCancelled = true;
             }
@@ -313,12 +323,7 @@ namespace TeamDeathmatch.Matches
 
             var killer = this.GetPlayer(@event.Instigator);
 
-            if (killer == null && @event.DeathCause != EDeathCause.BLEEDING)
-            {
-                return;
-            }
-
-            if (victim == killer)
+            if (killer == null || victim == killer)
             {
                 return;
             }
@@ -333,7 +338,7 @@ namespace TeamDeathmatch.Matches
                     break;
             }
 
-            var threshold = Configuration.GetValue("DeathThreshold", 30);
+            var threshold = Configuration.Instance.KillThreshold;
 
             if (_redDeaths >= threshold || _blueDeaths >= threshold)
             {
@@ -358,6 +363,18 @@ namespace TeamDeathmatch.Matches
             @event.Yaw = spawn.Yaw;
 
             return UniTask.CompletedTask;
+        }
+
+        public async UniTask HandleEventAsync(object? sender, UnturnedPlayerSpawnedEvent @event)
+        {
+            var player = this.GetPlayer(@event.Player);
+
+            if (player == null || Status != MatchStatus.InProgress)
+            {
+                return;
+            }
+
+            await SpawnPlayer(player);
         }
     }
 }

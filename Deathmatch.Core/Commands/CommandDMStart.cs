@@ -1,11 +1,11 @@
 ﻿using Cysharp.Threading.Tasks;
 using Deathmatch.API.Matches;
-using Deathmatch.Core.Helpers;
+using Deathmatch.API.Matches.Registrations;
 using Microsoft.Extensions.Localization;
+using OpenMod.API.Commands;
 using OpenMod.Core.Commands;
 using OpenMod.Unturned.Commands;
 using System;
-using Deathmatch.Core.Matches.Extensions;
 
 namespace Deathmatch.Core.Commands
 {
@@ -30,27 +30,25 @@ namespace Deathmatch.Core.Commands
 
         protected override async UniTask OnExecuteAsync()
         {
-            var title = await Context.Parameters.GetAsync<string>(0, null);
+            IMatchRegistration? registration = null;
 
-            var registration = string.IsNullOrWhiteSpace(title)
-                ? _matchManager.GetMatchRegistrations().RandomElement()
-                : _matchManager.GetMatchRegistration(title!);
-
-            if (registration == null)
+            if (Context.Parameters.Length > 0)
             {
-                await PrintAsync(_stringLocalizer["commands:dmstart:not_found"]);
-                return;
+                var title = await Context.Parameters.GetAsync<string>(0, null) ?? string.Empty;
+
+                registration = (string.IsNullOrEmpty(title) ? null : _matchManager.GetMatchRegistration(title))
+                               ?? throw new UserFriendlyException(_stringLocalizer["commands:dmstart:not_found"]);
             }
 
-            if (await _matchExecutor.StartMatch(registration))
+            if (!await _matchExecutor.StartMatch(registration))
             {
-                await PrintAsync(_stringLocalizer["commands:dmstart:success",
-                    new { registration.Title }]);
+                throw new UserFriendlyException(_stringLocalizer["commands:dmstart:match_running"]);
             }
-            else
-            {
-                await PrintAsync(_stringLocalizer["commands:dmstart:failure"]);
-            }
+
+            registration = _matchExecutor.CurrentMatch?.Registration ?? throw new Exception(
+                $"Match started but {nameof(IMatchExecutor)}.{nameof(IMatchExecutor.CurrentMatch)} or registration is null");
+
+            await PrintAsync(_stringLocalizer["commands:dmstart:success", new {registration.Title}]);
         }
     }
 }

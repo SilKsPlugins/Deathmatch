@@ -5,7 +5,7 @@
         /// <summary>
         /// Default value. Shouldn't be used.
         /// </summary>
-        Uninitialized,
+        Unknown,
 
         /// <summary>
         /// When a match has been initialized but <see cref="IMatch.StartAsync"/> has not yet been called.
@@ -33,8 +33,13 @@
         Ended,
 
         /// <summary>
-        /// When an exception occurred either during <see cref="IMatch.StartAsync"/> or <see cref="IMatch.EndAsync"/>.
+        /// When an exception occurred during <see cref="IMatch.StartAsync"/>.
         /// </summary>
-        Exception
+        ExceptionWhenStarting,
+
+        /// <summary>
+        /// When an exception occurred during <see cref="IMatch.EndAsync"/>.
+        /// </summary>
+        ExceptionWhenEnding
     }
 }

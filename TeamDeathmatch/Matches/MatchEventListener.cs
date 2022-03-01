@@ -1,22 +1,22 @@
 ﻿using Cysharp.Threading.Tasks;
 using Deathmatch.API.Matches;
-using Deathmatch.Core.Matches.Extensions;
 using Deathmatch.Core.Players.Extensions;
-using Microsoft.Extensions.Configuration;
 using OpenMod.API.Eventing;
 using OpenMod.Unturned.Players;
 using OpenMod.Unturned.Players.Life.Events;
+using SilK.Unturned.Extras.Configuration;
 using System.Threading.Tasks;
+using TeamDeathmatch.Configuration;
 
 namespace TeamDeathmatch.Matches
 {
     public class MatchEventListener : IEventListener<UnturnedPlayerDeathEvent>
     {
         private readonly IMatchExecutor _matchExecutor;
-        private readonly IConfiguration _configuration;
+        private readonly IConfigurationParser<TeamDeathmatchConfiguration> _configuration;
 
         public MatchEventListener(IMatchExecutor matchExecutor,
-            IConfiguration configuration)
+            IConfigurationParser<TeamDeathmatchConfiguration> configuration)
         {
             _matchExecutor = matchExecutor;
             _configuration = configuration;
@@ -48,12 +48,12 @@ namespace TeamDeathmatch.Matches
                 return;
             }
 
-            if (!_configuration.GetValue("AutoRespawn:Enabled", false))
+            if (!_configuration.Instance.AutoRespawn.Enabled)
             {
                 return;
             }
 
-            var delayConfig = _configuration.GetValue<double>("AutoRespawn:Delay", 0);
+            var delayConfig = _configuration.Instance.AutoRespawn.Delay;
 
             async UniTask AutoRespawnPlayer(UnturnedPlayer player, double delay)
             {

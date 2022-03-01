@@ -21,7 +21,7 @@ namespace Deathmatch.Core.Items
         {
             Id = "";
             Amount = 1;
-            Quality = byte.MaxValue;
+            Quality = 100;
             State = null;
         }
 
@@ -57,7 +57,7 @@ namespace Deathmatch.Core.Items
                 _cachedAsset = Assets.find(EAssetType.ITEM, parsed) as ItemAsset;
             }
 
-            return _cachedAsset ??= Assets.find(EAssetType.ITEM).OfType<ItemAsset>().FindBestMatch(x => x.itemName, Id);
+            return _cachedAsset ??= Assets.find(EAssetType.ITEM).OfType<ItemAsset>().Where(x => x != null).FindBestMatch(x => x.itemName, Id);
         }
 
         public virtual bool GiveToPlayer(IGamePlayer player)
@@ -78,9 +78,9 @@ namespace Deathmatch.Core.Items
                 asset.id,
                 Amount,
                 Quality,
-                State == null
+                string.IsNullOrWhiteSpace(State)
                     ? asset.getState(EItemOrigin.ADMIN)
-                    : State.Split(new[] {','}, StringSplitOptions.RemoveEmptyEntries).Select(byte.Parse).ToArray());
+                    : State!.Split(new[] {','}, StringSplitOptions.RemoveEmptyEntries).Select(byte.Parse).ToArray());
 
             player.Inventory.forceAddItem(item, true);
 

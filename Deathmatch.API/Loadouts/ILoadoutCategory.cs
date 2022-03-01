@@ -1,6 +1,5 @@
 ﻿using OpenMod.API;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 
 namespace Deathmatch.API.Loadouts
 {
@@ -11,12 +10,16 @@ namespace Deathmatch.API.Loadouts
         IReadOnlyCollection<string> Aliases { get; }
 
         IOpenModComponent Component { get; }
-        
+
+        ILoadout? GetDefaultLoadout();
+
         IReadOnlyCollection<ILoadout> GetLoadouts();
+    }
 
-        Task SaveLoadouts();
-
-        void AddLoadout(ILoadout loadout);
-        bool RemoveLoadout(ILoadout loadout);
+    public interface ILoadoutCategory<out TLoadout> : ILoadoutCategory where TLoadout : ILoadout
+    {
+        new TLoadout? GetDefaultLoadout();
+        
+        new IReadOnlyCollection<TLoadout> GetLoadouts();
     }
 }

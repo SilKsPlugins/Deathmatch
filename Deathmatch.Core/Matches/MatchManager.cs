@@ -25,8 +25,9 @@ namespace Deathmatch.Core.Matches
 
         public IReadOnlyCollection<IMatchRegistration> GetMatchRegistrations()
         {
-            return MatchProviders.SelectMany(x => x.GetMatchRegistrations()).OrderBy(x => x.Priority, _priorityComparer)
-                .ToList().AsReadOnly();
+            return MatchProviders.SelectMany(x => x.GetMatchRegistrations())
+                .OrderBy(x => x.Priority, _priorityComparer)
+                .ToList();
         }
 
         public void AddMatchProvider(IMatchProvider provider)

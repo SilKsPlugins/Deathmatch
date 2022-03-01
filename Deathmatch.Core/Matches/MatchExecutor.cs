@@ -6,13 +6,12 @@ using Deathmatch.API.Matches.Registrations;
 using Deathmatch.API.Players;
 using Deathmatch.Core.Helpers;
 using Deathmatch.Core.Matches.Events;
-using Deathmatch.Core.Matches.Extensions;
 using Deathmatch.Core.Matches.Registrations;
 using Deathmatch.Core.Players.Events;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Nito.AsyncEx;
 using OpenMod.API;
+using OpenMod.API.Commands;
 using OpenMod.API.Eventing;
 using OpenMod.API.Ioc;
 using OpenMod.API.Plugins;
@@ -23,6 +22,7 @@ using SilK.Unturned.Extras.Localization;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace Deathmatch.Core.Matches
 {
@@ -37,8 +37,6 @@ namespace Deathmatch.Core.Matches
         private readonly IMatchManager _matchManager;
         private readonly IPluginActivator _pluginActivator;
         private readonly IStringLocalizerAccessor<DeathmatchPlugin> _stringLocalizer;
-        private readonly ILogger<MatchExecutor> _logger;
-        private readonly ILifetimeScope _lifetimeScope;
         
         private readonly List<IGamePlayer> _participants;
         private readonly AsyncLock _matchLock;
@@ -47,17 +45,13 @@ namespace Deathmatch.Core.Matches
             IEventBus eventBus,
             IMatchManager matchManager,
             IPluginActivator pluginActivator,
-            IStringLocalizerAccessor<DeathmatchPlugin> stringLocalizer,
-            ILogger<MatchExecutor> logger,
-            ILifetimeScope lifetimeScope)
+            IStringLocalizerAccessor<DeathmatchPlugin> stringLocalizer)
         {
             _runtime = runtime;
             _eventBus = eventBus;
             _matchManager = matchManager;
             _pluginActivator = pluginActivator;
             _stringLocalizer = stringLocalizer;
-            _logger = logger;
-            _lifetimeScope = lifetimeScope;
             
             _participants = new List<IGamePlayer>();
             _matchLock = new AsyncLock();
@@ -65,38 +59,38 @@ namespace Deathmatch.Core.Matches
 
         public IReadOnlyCollection<IGamePlayer> GetParticipants() => _participants.AsReadOnly();
 
-        public async UniTask AddParticipant(IGamePlayer player)
+        public async UniTask<bool> AddParticipant(IGamePlayer player)
         {
-            if (!_participants.Contains(player))
+            if (_participants.Contains(player))
             {
-                await UniTask.SwitchToMainThread();
-
-                player.ClearMatchData();
-
-                _participants.Add(player);
-
-                if (CurrentMatch != null && !CurrentMatch.Players.Contains(player))
-                {
-                    var preEvent = new GamePlayerJoiningMatchEvent(player, CurrentMatch);
-                    await _eventBus.EmitAsync(_runtime, this, preEvent);
-                    if (preEvent.IsCancelled) return;
-
-                    await CurrentMatch.AddPlayer(player);
-
-                    player.CurrentMatch = CurrentMatch;
-
-                    var postEvent = new GamePlayerJoinedMatchEvent(player, CurrentMatch);
-                    await _eventBus.EmitAsync(_runtime, this, postEvent);
-                }
-                else
-                {
-                    await player.PrintMessageAsync(_stringLocalizer.GetInstance()["commands:join:success"]);
-                }
+                return false;
             }
-            else
+
+            await UniTask.SwitchToMainThread();
+
+            player.ClearMatchData();
+
+            _participants.Add(player);
+
+            if (CurrentMatch == null || CurrentMatch.Players.Contains(player))
             {
-                await player.PrintMessageAsync(_stringLocalizer.GetInstance()["commands:join:already"]);
+                return true;
             }
+
+            var joiningEvent = new GamePlayerJoiningMatchEvent(player, CurrentMatch);
+            await EmitEvent(joiningEvent);
+
+            if (joiningEvent.IsCancelled)
+            {
+                return false;
+            }
+
+            await CurrentMatch.AddPlayer(player);
+            player.CurrentMatch = CurrentMatch;
+
+            await EmitEvent(new GamePlayerJoinedMatchEvent(player, CurrentMatch));
+
+            return true;
         }
 
         public async UniTask RemoveParticipant(IGamePlayer player)
@@ -124,104 +118,121 @@ namespace Deathmatch.Core.Matches
                 }
                 else
                 {
-                    await player.PrintMessageAsync(_stringLocalizer.GetInstance()["commands:leave:success"]);
+                    await player.PrintMessageAsync(_stringLocalizer["commands:leave:success"]);
                 }
             }
             else
             {
-                await player.PrintMessageAsync(_stringLocalizer.GetInstance()["commands:leave:already"]);
+                await player.PrintMessageAsync(_stringLocalizer["commands:leave:already"]);
             }
+        }
+
+        private void CheckMatchInstance()
+        {
+            if (CurrentMatch == null)
+            {
+                return;
+            }
+
+            if (CurrentMatch.Status == MatchStatus.Initialized || CurrentMatch.Status == MatchStatus.Ended ||
+                CurrentMatch.Status == MatchStatus.ExceptionWhenEnding)
+            {
+                CurrentMatch = null;
+            }
+        }
+
+        private IMatchRegistration GetRandomMatchRegistration()
+        {
+            var registrations = _matchManager.GetEnabledMatchRegistrations();
+
+            if (registrations.Count == 0)
+            {
+                throw new UserFriendlyException(_stringLocalizer.GetInstance()["errors:no_registrations"]);
+            }
+
+            return registrations.RandomElement();
+        }
+
+        private ILifetimeScope GetScopeFromRegistration(IMatchRegistration registration)
+        {
+            var plugins = _pluginActivator.ActivatedPlugins;
+
+            var plugin = plugins.FirstOrDefault(x => x.GetType().Assembly == registration.Type.Assembly);
+
+            return plugin?.LifetimeScope ?? throw new Exception("Could not get match game mode's plugin instance");
+        }
+
+        private void BuildMatchScope(ContainerBuilder builder, IMatchRegistration registration)
+        {
+            builder.Register(_ => new MatchRegistrationAccessor(registration))
+                .AsSelf()
+                .As<IMatchRegistrationAccessor>();
+
+            builder.RegisterType(registration.Type)
+                .AsSelf()
+                .As<IMatch>()
+                .SingleInstance()
+                .OwnedByLifetimeScope();
+        }
+
+        private IMatch CreateMatchInstance(IMatchRegistration registration)
+        {
+            // Use the plugin's lifetime scope
+            var scope = GetScopeFromRegistration(registration);
+
+            // Create child scope
+            var matchScope = scope.BeginLifetimeScopeEx(builder => BuildMatchScope(builder, registration));
+
+            return (IMatch?)matchScope.Resolve(registration.Type) ??
+                   throw new Exception($"Unable to create instance of {registration.Type}.");
+        }
+
+        private async Task EmitEvent(IEvent @event)
+        {
+            await _eventBus.EmitAsync(_runtime, this, @event);
         }
 
         public async UniTask<bool> StartMatch(IMatchRegistration? registration = null)
         {
             await UniTask.SwitchToThreadPool();
 
-            using (await _matchLock.LockAsync())
+            using var matchLock = await _matchLock.LockAsync();
+
+            CheckMatchInstance();
+
+            if (CurrentMatch != null)
             {
-                if (CurrentMatch != null && CurrentMatch.Status != MatchStatus.Initialized)
+                return false;
+            }
+
+            try
+            {
+                registration ??= GetRandomMatchRegistration();
+
+                CurrentMatch = CreateMatchInstance(registration);
+
+                // Emit MatchStartingEvent 
+                var startingEvent = new MatchStartingEvent(CurrentMatch);
+                await EmitEvent(startingEvent);
+
+                // If start cancelled
+                if (startingEvent.IsCancelled)
                 {
-                    return false;
+                    throw new UserFriendlyException(_stringLocalizer["errors:match_start_cancelled"]);
                 }
 
-                await UniTask.SwitchToThreadPool();
+                // Start match
+                await CurrentMatch.StartAsync(_participants);
 
-                IMatch? match = null;
-
-                try
-                {
-                    if (registration == null)
-                    {
-                        var registrations = _matchManager.GetEnabledMatchRegistrations();
-
-                        if (registrations.Count == 0)
-                        {
-                            return false;
-                        }
-
-                        registration = registrations.RandomElement();
-                    }
-
-                    var scope = _lifetimeScope;
-
-                    // Use the plugin's lifetime scope
-                    var plugin = _pluginActivator.ActivatedPlugins.FirstOrDefault(x =>
-                        x.GetType().Assembly == registration.Type.Assembly);
-
-                    if (plugin != null)
-                    {
-                        scope = plugin.LifetimeScope;
-                    }
-
-                    // Create scope
-
-                    var matchScope = scope.BeginLifetimeScopeEx(builder =>
-                    {
-                        builder.Register(_ => new MatchRegistrationAccessor(registration))
-                            .AsSelf()
-                            .As<IMatchRegistrationAccessor>();
-
-                        builder.RegisterType(registration.Type)
-                            .AsSelf()
-                            .As<IMatch>()
-                            .SingleInstance()
-                            .OwnedByLifetimeScope();
-                    });
-
-                    match = (IMatch?)matchScope.Resolve(registration.Type);
-                    
-                    if (match == null)
-                    {
-                        throw new Exception($"Unable to create instance of {registration.Type.Name}.");
-                    }
-
-                    // Emit MatchStartingEvent 
-
-                    var startingEvent = new MatchStartingEvent(match);
-
-                    await _eventBus.EmitAsync(_runtime, this, startingEvent);
-
-                    if (startingEvent.IsCancelled)
-                    {
-                        return false;
-                    }
-
-                    // Start match
-
-                    CurrentMatch = match;
-
-                    await CurrentMatch.StartAsync(_participants);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Exception occurred when attempting to start match");
-
-                    return false;
-                }
-
-                CurrentMatch = match;
+                // Emit MatchStartedEvent
+                await EmitEvent(new MatchStartedEvent(CurrentMatch));
 
                 return true;
+            }
+            catch
+            {
+                CurrentMatch = null;
+                throw;
             }
         }
 

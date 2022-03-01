@@ -4,7 +4,6 @@ using OpenMod.API.Ioc;
 using OpenMod.API.Prioritization;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace Deathmatch.Core.Loadouts
 {

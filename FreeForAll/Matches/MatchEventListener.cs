@@ -1,6 +1,5 @@
 ﻿using Cysharp.Threading.Tasks;
 using Deathmatch.API.Matches;
-using Deathmatch.Core.Matches.Extensions;
 using Deathmatch.Core.Players.Extensions;
 using JetBrains.Annotations;
 using Microsoft.Extensions.Configuration;

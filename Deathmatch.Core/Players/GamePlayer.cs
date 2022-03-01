@@ -3,6 +3,7 @@ using Deathmatch.API.Players;
 using OpenMod.Unturned.Users;
 using SDG.Unturned;
 using Steamworks;
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using UnityEngine;
@@ -26,7 +27,7 @@ namespace Deathmatch.Core.Players
 
         public bool IsInActiveMatch()
         {
-            return CurrentMatch != null && CurrentMatch.Status == MatchStatus.InProgress;
+            return CurrentMatch is { Status: MatchStatus.InProgress };
         }
 
         public T? GetMatchData<T>(string key)
@@ -65,7 +66,7 @@ namespace Deathmatch.Core.Players
 
         public PlayerClothing Clothing => Player.clothing;
 
-        private static readonly byte[] EmptyArray = new byte[0];
+        private static readonly byte[] EmptyArray = Array.Empty<byte>();
 
         public void ClearClothing() => Clothing.updateClothes(
             0, 0, EmptyArray,
@@ -91,6 +92,9 @@ namespace Deathmatch.Core.Players
                     Inventory.removeItem(page, 0);
                 }
             }
+
+            Player.equipment.sendSlot(0);
+            Player.equipment.sendSlot(1);
         }
 
         public PlayerLife Life => Player.life;

@@ -9,6 +9,14 @@ namespace TeamDeathmatch.Items
     [Serializable]
     public class TeamItem : Item
     {
+        public TeamItem()
+        {
+        }
+
+        public TeamItem(ushort id, byte amount, byte quality, byte[] state) : base(id, amount, quality, state)
+        {
+        }
+
         public Team Team { get; set; }
 
         public override bool GiveToPlayer(IGamePlayer player)

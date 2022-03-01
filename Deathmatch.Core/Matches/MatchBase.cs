@@ -1,19 +1,22 @@
 ﻿using Autofac;
 using Cysharp.Threading.Tasks;
+using Deathmatch.API.Loadouts;
 using Deathmatch.API.Matches;
 using Deathmatch.API.Matches.Registrations;
 using Deathmatch.API.Players;
 using Deathmatch.API.Preservation;
+using Deathmatch.Core.Grace;
+using Deathmatch.Core.Loadouts;
 using Deathmatch.Core.Matches.Events;
-using Deathmatch.Core.Matches.Extensions;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Logging;
 using Nito.AsyncEx;
 using OpenMod.API;
 using OpenMod.API.Eventing;
+using OpenMod.API.Permissions;
 using OpenMod.API.Users;
-using OpenMod.Core.Eventing;
+using SilK.Unturned.Extras.Configuration;
 using SilK.Unturned.Extras.Events;
 using System;
 using System.Collections.Generic;
@@ -23,16 +26,24 @@ using System.Threading.Tasks;
 
 namespace Deathmatch.Core.Matches
 {
-    public abstract class MatchBase : IMatch, IAsyncDisposable
+    public abstract class MatchBase<TConfig, TLoadoutCategory> : IMatch, IAsyncDisposable
+        where TConfig : class
+        where TLoadoutCategory : class, ILoadoutCategory
     {
-        protected static Random Rng = new();
+        protected Random Rng = new();
 
         protected readonly IOpenModComponent OpenModComponent;
-        protected readonly IConfiguration Configuration;
+        protected readonly IConfigurationParser<TConfig> Configuration;
         protected readonly IStringLocalizer StringLocalizer;
         protected readonly IPreservationManager PreservationManager;
         protected readonly IMatchExecutor MatchExecutor;
         protected readonly IUserManager UserManager;
+        protected readonly IGraceManager GraceManager;
+        protected readonly ILoadoutManager LoadoutManager;
+        protected readonly ILoadoutSelector LoadoutSelector;
+        protected readonly IPermissionChecker PermissionChecker;
+        protected readonly ILogger Logger;
+        protected readonly TLoadoutCategory LoadoutCategory;
 
         private readonly IEventBus _eventBus;
         private readonly IEventSubscriber _eventSubscriber;
@@ -55,13 +66,22 @@ namespace Deathmatch.Core.Matches
         protected MatchBase(IServiceProvider serviceProvider)
         {
             OpenModComponent = serviceProvider.GetRequiredService<IOpenModComponent>();
-            Configuration = serviceProvider.GetRequiredService<IConfiguration>();
+            Configuration = serviceProvider.GetRequiredService<IConfigurationParser<TConfig>>();
             StringLocalizer = serviceProvider.GetRequiredService<IStringLocalizer>();
             PreservationManager = serviceProvider.GetRequiredService<IPreservationManager>();
             MatchExecutor = serviceProvider.GetRequiredService<IMatchExecutor>();
             UserManager = serviceProvider.GetRequiredService<IUserManager>();
+            GraceManager = serviceProvider.GetRequiredService<IGraceManager>();
+            LoadoutManager = serviceProvider.GetRequiredService<ILoadoutManager>();
+            LoadoutSelector = serviceProvider.GetRequiredService<ILoadoutSelector>();
+            PermissionChecker = serviceProvider.GetRequiredService<IPermissionChecker>();
+            LoadoutCategory = LoadoutManager.GetCategory<TLoadoutCategory>() ??
+                              throw new Exception($"Cannot find category {nameof(TLoadoutCategory)}");
 
-            _eventBus = serviceProvider.GetRequiredService<EventBus>();
+            var loggerType = typeof(ILogger<>).MakeGenericType(GetType());
+            Logger = (ILogger)serviceProvider.GetRequiredService(loggerType);
+
+            _eventBus = serviceProvider.GetRequiredService<IEventBus>();
             _eventSubscriber = serviceProvider.GetRequiredService<IEventSubscriber>();
 
             _players = new List<IGamePlayer>();
@@ -100,21 +120,19 @@ namespace Deathmatch.Core.Matches
 
             try
             {
+                Logger.LogInformation("Starting match {Title}", Registration.Title);
+
                 await OnStartAsync();
 
                 await this.AddPlayers(players);
+
+                Status = MatchStatus.InProgress;
             }
             catch
             {
-                Status = MatchStatus.Exception;
+                Status = MatchStatus.ExceptionWhenStarting;
                 throw;
             }
-
-            Status = MatchStatus.InProgress;
-
-            var startedEvent = new MatchStartedEvent(this);
-
-            await _eventBus.EmitAsync(OpenModComponent, this, startedEvent);
         }
         
         public async UniTask EndAsync()
@@ -140,6 +158,8 @@ namespace Deathmatch.Core.Matches
 
                 // End match
 
+                Logger.LogInformation("Ending match {Title}", Registration.Title);
+
                 _cancellationTokenSource.Cancel();
 
                 var players = _players.ToList();
@@ -161,7 +181,7 @@ namespace Deathmatch.Core.Matches
             }
             catch
             {
-                Status = MatchStatus.Exception;
+                Status = MatchStatus.ExceptionWhenEnding;
                 throw;
             }
 
@@ -190,7 +210,8 @@ namespace Deathmatch.Core.Matches
                     throw new Exception("Cannot add players. Match is ending.");
                 case MatchStatus.Ended:
                     throw new Exception("Cannot add players. Match has ended.");
-                case MatchStatus.Exception:
+                case MatchStatus.ExceptionWhenStarting:
+                case MatchStatus.ExceptionWhenEnding:
                     throw new Exception("Cannot add players. Match is in exception state.");
             }
 

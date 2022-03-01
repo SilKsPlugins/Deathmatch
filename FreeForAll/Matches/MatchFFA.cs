@@ -3,25 +3,21 @@ using Deathmatch.API.Loadouts;
 using Deathmatch.API.Matches;
 using Deathmatch.API.Players;
 using Deathmatch.API.Players.Events;
-using Deathmatch.Core.Grace;
 using Deathmatch.Core.Helpers;
 using Deathmatch.Core.Items;
 using Deathmatch.Core.Loadouts;
 using Deathmatch.Core.Matches;
-using Deathmatch.Core.Matches.Extensions;
 using Deathmatch.Core.Spawns;
+using FreeForAll.Configuration;
+using FreeForAll.Loadouts;
 using FreeForAll.Players;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using MoreLinq;
 using OpenMod.API.Commands;
-using OpenMod.API.Permissions;
-using OpenMod.API.Plugins;
 using OpenMod.Core.Users;
 using OpenMod.UnityEngine.Extensions;
 using OpenMod.Unturned.Players.Life.Events;
 using SilK.Unturned.Extras.Events;
-using SilK.Unturned.Extras.Plugins;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -32,38 +28,20 @@ namespace FreeForAll.Matches
     [Match("Free For All")]
     [MatchDescription("A game mode where the first to the kill threshold wins.")]
     [MatchAlias("FFA")]
-    public class MatchFFA : MatchBase,
+    public class MatchFFA : MatchBase<FreeForAllConfig, FFALoadoutCategory>,
         IInstanceEventListener<UnturnedPlayerDeathEvent>,
         IInstanceEventListener<IGamePlayerSelectingRespawnEvent>,
         IInstanceEventListener<UnturnedPlayerSpawnedEvent>
     {
-        private readonly IPluginAccessor<FreeForAllPlugin> _pluginAccessor;
-        private readonly ILogger<MatchFFA> _logger;
-        private readonly ILoadoutManager _loadoutManager;
-        private readonly ILoadoutSelector _loadoutSelector;
-        private readonly IPermissionChecker _permissionChecker;
-        private readonly IGraceManager _graceManager;
+        private readonly SpawnDirectory _spawnDirectory;
 
-        public MatchFFA(
-            IPluginAccessor<FreeForAllPlugin> pluginAccessor,
-            ILogger<MatchFFA> logger,
-            ILoadoutManager loadoutManager,
-            ILoadoutSelector loadoutSelector,
-            IPermissionChecker permissionChecker,
-            IGraceManager graceManager,
-            IServiceProvider serviceProvider) : base(serviceProvider)
+        public MatchFFA(IServiceProvider serviceProvider,
+            SpawnDirectory spawnDirectory) : base(serviceProvider)
         {
-            _pluginAccessor = pluginAccessor;
-            _logger = logger;
-            _loadoutManager = loadoutManager;
-            _loadoutSelector = loadoutSelector;
-            _permissionChecker = permissionChecker;
-            _graceManager = graceManager;
+            _spawnDirectory = spawnDirectory;
         }
 
-        public IReadOnlyCollection<PlayerSpawn> GetSpawns() => _pluginAccessor.Instance?.Spawns ??
-                                                               throw new PluginNotLoadedException(
-                                                                   typeof(FreeForAllPlugin));
+        public IReadOnlyCollection<PlayerSpawn> GetSpawns() => _spawnDirectory.Spawns;
 
         public PlayerSpawn GetFurthestSpawn()
         {
@@ -84,18 +62,14 @@ namespace FreeForAll.Matches
 
         public async UniTask<ILoadout?> GetLoadout(IGamePlayer player)
         {
-            const string category = "Free For All";
+            var loadout = LoadoutSelector.GetSelectedLoadout(player, LoadoutCategory);
 
-            var loadout = _loadoutSelector.GetLoadout(player, category);
-
-            if (loadout != null && (loadout.Permission == null ||
-                                    await _permissionChecker.CheckPermissionAsync(player.User, loadout.Permission) ==
-                                    PermissionGrantResult.Grant))
+            if (loadout != null && await loadout.IsPermitted(player.User))
             {
                 return loadout;
             }
 
-            return await _loadoutManager.GetRandomLoadout(category, player, _permissionChecker);
+            return await LoadoutCategory.GetRandomLoadout(player);
         }
 
         public async UniTask GiveLoadout(IGamePlayer player)
@@ -111,7 +85,7 @@ namespace FreeForAll.Matches
             }
             else
             {
-                loadout.GiveToPlayer(player);
+                await loadout.GiveToPlayer(player);
             }
         }
 
@@ -119,20 +93,41 @@ namespace FreeForAll.Matches
         {
             await UniTask.SwitchToMainThread();
 
-            _graceManager.GrantGracePeriod(player, Configuration.GetValue<float>("GracePeriod", 2));
+            GraceManager.GrantGracePeriod(player, Configuration.Instance.GracePeriod);
         }
 
-        public async UniTask SpawnPlayer(IGamePlayer player, PlayerSpawn spawn)
+        public async UniTask SpawnPlayer(IGamePlayer player, PlayerSpawn? spawn = null)
         {
             await UniTask.SwitchToMainThread();
 
-            await GrantGracePeriod(player);
+            try
+            {
+                await GrantGracePeriod(player);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error occurred when granting player grace period");
+            }
 
-            spawn.SpawnPlayer(player);
+            spawn?.SpawnPlayer(player);
 
-            player.Heal();
+            try
+            {
+                player.Heal();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error occurred when healing player");
+            }
 
-            await GiveLoadout(player);
+            try
+            {
+                await GiveLoadout(player);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error occurred when giving player loadout");
+            }
         }
 
         protected override async UniTask OnPlayerAdded(IGamePlayer player)
@@ -191,7 +186,7 @@ namespace FreeForAll.Matches
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Error occurred restoring player.");
+                    Logger.LogError(ex, "Error occurred restoring player.");
                     exceptions.Add(ex);
                 }
             }
@@ -204,14 +199,20 @@ namespace FreeForAll.Matches
             IGamePlayer? winner = null;
             var maxKills = 0;
 
+            Logger.LogDebug("FFA Match Kills:");
+
             foreach (var player in Players)
             {
-                if (player.GetKills() > maxKills)
+                var playerKills = player.GetKills();
+
+                Logger.LogDebug("{PlayerId} - {Kills}", player.SteamId, playerKills);
+
+                if (playerKills > maxKills)
                 {
                     winner = player;
-                    maxKills = player.GetKills();
+                    maxKills = playerKills;
                 }
-                else if (player.GetKills() == maxKills)
+                else if (playerKills == maxKills)
                 {
                     winner = null;
                 }
@@ -219,27 +220,29 @@ namespace FreeForAll.Matches
 
             if (winner != null)
             {
+                Logger.LogInformation(
+                    "Player '{PlayerName}' ({PlayerSteamId}) has won the FFA match with {Kills} kills.",
+                    winner.DisplayName, winner.SteamId, maxKills);
+
                 await UserManager.BroadcastAsync(KnownActorTypes.Player,
-                    StringLocalizer["announcements:match_end:player_won", new { Winner = winner.User }]);
+                    StringLocalizer["announcements:match_end:player_won", new {Winner = winner.User}]);
             }
             else
             {
+                Logger.LogInformation("The FFA match has ended in a tie with {Kills} kills.");
+
                 await UserManager.BroadcastAsync(KnownActorTypes.Player,
                     StringLocalizer["announcements:match_end:tie"]);
             }
 
-            if (Players.Count >= Configuration.GetValue("Rewards:MinimumPlayers", 5))
+            if (Players.Count >= Configuration.Instance.Rewards.MinimumPlayers)
             {
-                var winnerRewards =
-                    Configuration.GetSection("Rewards:Winners").Get<List<ChanceItem>>() ?? new List<ChanceItem>();
-                var loserRewards =
-                    Configuration.GetSection("Rewards:Losers").Get<List<ChanceItem>>() ?? new List<ChanceItem>();
-                var tiedRewards =
-                    Configuration.GetSection("Rewards:Tied").Get<List<ChanceItem>>() ?? new List<ChanceItem>();
-                var allRewards =
-                    Configuration.GetSection("Rewards:All").Get<List<ChanceItem>>() ?? new List<ChanceItem>();
+                var winnerRewards = Configuration.Instance.Rewards.Winners;
+                var loserRewards = Configuration.Instance.Rewards.Losers;
+                var tiedRewards = Configuration.Instance.Rewards.Tied;
+                var allRewards = Configuration.Instance.Rewards.All;
 
-                void GiveRewards(IGamePlayer player, List<ChanceItem> items)
+                void GiveRewards(IGamePlayer player, IEnumerable<ChanceItem> items)
                 {
                     foreach (var item in items)
                     {
@@ -263,7 +266,7 @@ namespace FreeForAll.Matches
 
         private void SetupDelayedEnd()
         {
-            var maxDuration = Configuration.GetValue("MaxDuration", 0f);
+            var maxDuration = Configuration.Instance.MaxDuration;
 
             if (maxDuration <= 0)
             {
@@ -288,6 +291,8 @@ namespace FreeForAll.Matches
             var victim = this.GetPlayer(@event.Player);
             var killer = this.GetPlayer(@event.Instigator);
 
+            Logger.LogDebug("{VictimId} (IsNull: {VictimIsNull}) died to {KillerId} (IsNull: {KillerIsNull})", @event.Player.SteamId, @event.Instigator, victim == null, killer == null);
+
             if (victim == null || killer == null || killer == victim)
             {
                 return;
@@ -297,7 +302,7 @@ namespace FreeForAll.Matches
 
             killer.SetKills(kills);
 
-            var threshold = Configuration.GetValue("KillThreshold", 30);
+            var threshold = Configuration.Instance.KillThreshold;
 
             if (kills >= threshold)
             {
@@ -333,13 +338,7 @@ namespace FreeForAll.Matches
                 return;
             }
 
-            await UniTask.SwitchToMainThread();
-
-            player.Heal();
-
-            await GrantGracePeriod(player);
-
-            await GiveLoadout(player);
+            await SpawnPlayer(player);
         }
     }
 }
