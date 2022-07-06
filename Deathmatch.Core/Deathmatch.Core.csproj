@@ -4,6 +4,14 @@
 		<TargetFramework>net461</TargetFramework>
 	</PropertyGroup>
 
+	<PropertyGroup>
+		<PackageId>Deathmatch.API</PackageId>
+		<PackageLicenseExpression>EUPL-1.2</PackageLicenseExpression>
+		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+		<GenerateNugetPackage>true</GenerateNugetPackage>
+		<Company>SilK's Plugins</Company>
+	</PropertyGroup>
+
 	<Import Project="$(MSBuildProjectDirectory)\..\props\SharedProjectProps.props" />
 
 	<ItemGroup>
