@@ -25,7 +25,12 @@ jobs:
       run: "sed -i \"s#<Version>0.0.0</Version>#<Version>${{ github.event.inputs.version }}</Version>#\" props/SharedProjectProps.props"
     - name: Build
       run: dotnet build --configuration Release --no-restore
-    - name: Push to NuGet
+    - name: Push to NuGet (Deathmatch.API)
+      run: dotnet nuget push Deathmatch.API/bin/Release/*.nupkg
+             --api-key ${{ secrets.NUGET_DEPLOY_KEY }}
+             --source https://api.nuget.org/v3/index.json
+             --skip-duplicate
+    - name: Push to NuGet (Deathmatch.Core)
       run: dotnet nuget push Deathmatch.Core/bin/Release/*.nupkg
              --api-key ${{ secrets.NUGET_DEPLOY_KEY }}
              --source https://api.nuget.org/v3/index.json
