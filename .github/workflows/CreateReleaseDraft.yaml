@@ -51,9 +51,6 @@ jobs:
       run: |
         mkdir -p ./OpenMod/Plugins ./OpenMod/Libraries
         
-        mv Deathmatch.API/bin/Release/net461/Deathmatch.API.dll ./OpenMod/Libraries
-        
-        mv Deathmatch.Core/bin/Release/net461/Deathmatch.Core.dll ./OpenMod/Plugins
         mv Deathmatch.Addons/bin/Release/net461/Deathmatch.Addons.dll ./OpenMod/Plugins
         mv FreeForAll/bin/Release/net461/FreeForAll.dll ./OpenMod/Plugins
         mv TeamDeathmatch/bin/Release/net461/TeamDeathmatch.dll ./OpenMod/Plugins
