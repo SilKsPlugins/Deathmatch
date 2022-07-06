@@ -5,7 +5,7 @@
 	</PropertyGroup>
 
 	<PropertyGroup>
-		<PackageId>Deathmatch.API</PackageId>
+		<PackageId>Deathmatch.Core</PackageId>
 		<PackageLicenseExpression>EUPL-1.2</PackageLicenseExpression>
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 		<GenerateNugetPackage>true</GenerateNugetPackage>
