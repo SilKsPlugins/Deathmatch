@@ -1,0 +1,49 @@
+name: Deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Plugin Version (SemVer: https://semver.org)'
+        required: true
+jobs:
+  deploy:
+    name: "NuGet Deployment"
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+      name: Checkout Repository
+      with:
+        fetch-depth: 0
+    - name: Setup .NET Core
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: 5.0.x
+    - name: Install dependencies
+      run: dotnet restore
+    - name: Update version (Deathmatch.API)
+      run: "sed -i \"s#<Version>0.0.0</Version>#<Version>${{ github.event.inputs.version }}</Version>#\" Deathmatch.API/Deathmatch.API.csproj"
+    - name: Update version (Deathmatch.Core)
+      run: "sed -i \"s#<Version>0.0.0</Version>#<Version>${{ github.event.inputs.version }}</Version>#\" Deathmatch.Core/Deathmatch.Core.csproj"
+    - name: Build
+      run: dotnet build --configuration Release --no-restore
+    - name: Push to NuGet (Deathmatch.API)
+      run: dotnet nuget push Deathmatch.API/bin/Release/*.nupkg
+             --api-key ${{ secrets.NUGET_DEPLOY_KEY }}
+             --source https://api.nuget.org/v3/index.json
+             --skip-duplicate
+    - name: Push to GitHub (Deathmatch.API)
+      run: dotnet nuget push Deathmatch.API/bin/Release/*.nupkg
+             --api-key ${{ secrets.GITHUB_TOKEN }}
+             --source https://nuget.pkg.github.com/silksplugins/index.json
+             --skip-duplicate
+    - name: Push to NuGet (Deathmatch.Core)
+      run: dotnet nuget push Deathmatch.Core/bin/Release/*.nupkg
+             --api-key ${{ secrets.NUGET_DEPLOY_KEY }}
+             --source https://api.nuget.org/v3/index.json
+             --skip-duplicate
+    - name: Push to GitHub (Deathmatch.Core)
+      run: dotnet nuget push Deathmatch.Core/bin/Release/*.nupkg
+             --api-key ${{ secrets.GITHUB_TOKEN }}
+             --source https://nuget.pkg.github.com/silksplugins/index.json
+             --skip-duplicate
